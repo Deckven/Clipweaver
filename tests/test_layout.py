@@ -7,7 +7,6 @@ used to surface only on the Vegas timeline, at the user's expense.
 
 from pathlib import Path
 
-import pytest
 
 from clipmaker.layout import (
     LayoutEvent,
@@ -154,7 +153,7 @@ def test_layout_txt_rows_have_five_pipe_fields_and_no_pipe_in_label():
                     path=Path(r"C:\clips\01.mp4"), label="fr 01 a/b"),
     ])
     text = render_layout_txt(res, "p", "narr.mp3", 60, "Track", 400)
-    row = [l for l in text.splitlines() if "|" in l][0]
+    row = [ln for ln in text.splitlines() if "|" in ln][0]
     assert row.split("|") == ["0", "1000", "500", "fr 01 a/b", r"C:\clips\01.mp4"]
     assert "audio=narr.mp3" in text
 

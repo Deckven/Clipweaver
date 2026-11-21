@@ -99,7 +99,7 @@ def resolve_source(video_name: str, footage_dir: Path,
 
 
 def main(project: str) -> None:
-    project_dir = config.PROJECTS_DIR / project
+    project_dir = config.project_path(project)
     clips_dir = project_dir / "clips"
     footage_dir = project_dir / "footage"
     timings_path = project_dir / "timings.json"

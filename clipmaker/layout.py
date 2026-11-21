@@ -364,7 +364,7 @@ def main() -> None:
                          "placed on the spoken second")
     args = ap.parse_args()
 
-    project_dir = config.PROJECTS_DIR / args.project
+    project_dir = config.project_path(args.project)
     if not project_dir.is_dir():
         sys.exit(f"No project folder {project_dir}")
     try:

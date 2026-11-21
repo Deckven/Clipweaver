@@ -21,13 +21,12 @@ dependencies = [
 # Install torch from the PyTorch index that matches your CUDA first.
 vlm = [
     "torch>=2.3",
-    "transformers>=4.45,<5",
+    # Tested with transformers 5.x (AutoModelForImageTextToText, dtype= kwarg).
+    "transformers>=5,<6",
+    # accelerate: device_map; bitsandbytes: the 4-bit NF4 quantization config.
     "accelerate>=0.30",
     "bitsandbytes>=0.43",
     "qwen-vl-utils>=0.0.8",
-    "av>=12",
-    "decord>=0.6",
-    "sentencepiece>=0.2",
 ]
 # On-screen text in the catalog (HUD, place and item names, numbers).
 ocr = ["easyocr>=1.7", "opencv-python-headless>=4.8"]
@@ -45,3 +44,11 @@ packages = ["clipmaker"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# pyflakes + the pycodestyle errors ruff checks by default
+select = ["E4", "E7", "E9", "F"]

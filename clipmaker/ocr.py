@@ -101,7 +101,7 @@ def _is_noise(line: str) -> bool:
 
 
 def filter_noise(lines: list[str]) -> list[str]:
-    return [l for l in lines if not _is_noise(l)]
+    return [ln for ln in lines if not _is_noise(ln)]
 
 
 # ---- Phrase normalization & chrome filtering ----
@@ -194,7 +194,7 @@ def _norm_tok(s: str) -> str:
 
 def _collapse_phrases(lines: list[str]) -> list[str]:
     """Merge split OCR fragments that form a known multi-word phrase."""
-    norm = [_norm_tok(l) for l in lines]
+    norm = [_norm_tok(ln) for ln in lines]
     used: set[int] = set()
     out: list[str] = []
 
@@ -234,7 +234,7 @@ def _is_chrome(line: str) -> bool:
 def filter_chrome(lines: list[str]) -> list[str]:
     """Remove UI-chrome tokens after phrase collapsing. Keeps captions readable."""
     collapsed = _collapse_phrases(lines)
-    return [l for l in collapsed if not _is_chrome(l)]
+    return [ln for ln in collapsed if not _is_chrome(ln)]
 
 
 def dedupe_preserving_order(per_frame_text: list[list[str]]) -> list[str]:

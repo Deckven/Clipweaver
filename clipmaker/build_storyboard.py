@@ -183,7 +183,7 @@ def fmt_ts(sec: float) -> str:
 
 
 def main(project: str) -> None:
-    project_dir = config.PROJECTS_DIR / project
+    project_dir = config.project_path(project)
     timings_v1_path = project_dir / "timings_v1.json"
     transcript_path = project_dir / "transcript.json"
     out_path = project_dir / "timings.json"

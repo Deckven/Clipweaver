@@ -38,7 +38,7 @@ def _fragment_quote(block: str) -> str:
         if not s:
             continue
         break  # first content line after (or before) the quote
-    return " ".join(l for l in lines if l)
+    return " ".join(ln for ln in lines if ln)
 
 
 def parse_storyboard(path: Path) -> list[dict]:
@@ -168,7 +168,7 @@ def fmt_ts(sec: float) -> str:
 def align(project: str):
     # Never config.get_project_dir here: it creates the folder, and a mistyped
     # name used to leave stray directories like projects/--project behind.
-    project_dir = config.PROJECTS_DIR / project
+    project_dir = config.project_path(project)
     if not project_dir.is_dir():
         print(f"No project folder {project_dir}")
         sys.exit(1)

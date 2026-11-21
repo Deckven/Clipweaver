@@ -174,7 +174,7 @@ def main() -> None:
     ap.add_argument("--frames", type=int, default=DEFAULT_FRAMES)
     args = ap.parse_args()
 
-    project_dir = config.PROJECTS_DIR / args.project
+    project_dir = config.project_path(args.project)
     timings_path = project_dir / "timings.json"
     if not timings_path.exists():
         sys.exit(f"No timings.json in {project_dir} — run build_storyboard first.")

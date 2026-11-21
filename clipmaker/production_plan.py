@@ -67,7 +67,6 @@ def _recommend_source(local_matches: list, yt_matches: list, stock_matches: list
 
     best_local = local_matches[0]["_score"] if local_matches else 0
     best_yt = yt_matches[0]["_score"] if yt_matches else 0
-    best_stock = stock_matches[0].get("_score", 0.3) if stock_matches else 0
 
     if best_local >= 0.5:
         confidence = "high" if best_local >= 0.7 else "medium"
@@ -224,8 +223,8 @@ def render_plan_markdown(plan: dict) -> str:
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"| Metric | Value |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
     lines.append(f"| Fragments | {plan['total_fragments']} |")
     lines.append(f"| Total duration | {total_min:.1f} min |")
     lines.append(f"| Covered by local catalog | {cov['local_catalog']:.0%} |")
@@ -254,17 +253,17 @@ def render_plan_markdown(plan: dict) -> str:
         lines.append(f"- **Recommendation:** `{rec}` (confidence: {conf})")
 
         if frag["sources"]["local"]:
-            lines.append(f"- **Local matches:**")
+            lines.append("- **Local matches:**")
             for m in frag["sources"]["local"]:
                 lines.append(f"  - {m['title']} (score: {m['score']:.2f}, file: `{m['file']}`)")
 
         if frag["sources"]["youtube"]:
-            lines.append(f"- **YouTube:**")
+            lines.append("- **YouTube:**")
             for v in frag["sources"]["youtube"]:
                 lines.append(f"  - {v['title']} (score: {v['score']:.2f}) — {v['url']}")
 
         if frag["sources"]["stock"]:
-            lines.append(f"- **Stock footage:**")
+            lines.append("- **Stock footage:**")
             for s in frag["sources"]["stock"]:
                 lines.append(f"  - [{s['source']}] {s['title']} ({s['duration_sec']}s) — {s['url']}")
 
@@ -350,7 +349,7 @@ if __name__ == "__main__":
     json_path, md_path = save_plan(plan, project)
 
     print()
-    print(f"Plan saved:")
+    print("Plan saved:")
     print(f"  JSON: {json_path}")
     print(f"  MD:   {md_path}")
 

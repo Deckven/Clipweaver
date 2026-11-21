@@ -1,10 +1,9 @@
 """Per-project Vegas settings and take-lag tables: vegas.json -> layout.txt.
 
-Until 2026-10-27 every video whose timeline held the raw narration takes got
-its own copy of the loader .cs with a hand-typed lag table (SEG_* / REC_*
-arrays) — against the "no per-project .cs" rule. The table now lives in the
-project's vegas.json, layout.py copies it into layout.txt, and the one generic
-vegas_scripts/import_layout.cs reads it from there.
+When the timeline holds the raw narration takes instead of one mixed mp3, the
+loader needs to know where each take sits in the narration. That table lives in
+the project's vegas.json; layout.py copies it into layout.txt, and the one
+generic vegas_scripts/import_layout.cs reads it from there.
 
 vegas.json sits in the project folder (layout.py also finds it in a parent
 folder, so <project>/overlays inherits it):
@@ -28,15 +27,11 @@ and are not frame-quantized.
 CLI:
     python -m clipmaker.vegas_takes sync --project <p>
         vegas.json takes -> the take= lines of <p>/layout.txt (events untouched)
-    python -m clipmaker.vegas_takes from-cs <loader.cs> --project <p> [--fps F]
-        migrate an old per-project loader: its SEG_*/REC_* table -> vegas.json,
-        fps/audio from the project's layout.txt header, then sync
 """
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -202,74 +197,6 @@ def sync_layout(project_dir: Path, takes: tuple[TakeSegment, ...] | list[TakeSeg
 
 
 # --------------------------------------------------------------------------
-# migration from the old per-project loaders
-# --------------------------------------------------------------------------
-
-def _array_body(text: str, name: str) -> str | None:
-    """The text between the braces of `static readonly T[] NAME = { ... };`."""
-    m = re.search(r"static\s+readonly\s+\w+\[\]\s+" + name + r"\s*=\s*\{(.*?)\};", text, re.S)
-    return None if m is None else m.group(1)
-
-
-def _strings(text: str, name: str) -> list[str] | None:
-    body = _array_body(text, name)
-    return None if body is None else re.findall(r'"([^"]*)"', body)
-
-
-def _doubles(text: str, name: str) -> list[float] | None:
-    body = _array_body(text, name)
-    if body is None:
-        return None
-    return [float(x) for x in body.split(",") if x.strip()]
-
-
-def parse_cs_tables(text: str) -> list[TakeSegment]:
-    """Take segments from an old loader: SEG_FILE (or SEG_NAME)/FROM/TO/LAG
-    (piecewise) or REC_NAMES/LAG/USED (one piece per take, from 0 to USED)."""
-    files = _strings(text, "SEG_FILE")
-    if files is None:
-        files = _strings(text, "SEG_NAME")
-    if files is not None:
-        cols = [_doubles(text, n) for n in ("SEG_FROM", "SEG_TO", "SEG_LAG")]
-    else:
-        files = _strings(text, "REC_NAMES")
-        if files is None:
-            raise ValueError("no SEG_FILE or REC_NAMES table found")
-        lag, used = _doubles(text, "REC_LAG"), _doubles(text, "REC_USED")
-        cols = [[0.0] * len(files), used, lag]
-    if any(c is None or len(c) != len(files) for c in cols):
-        raise ValueError(f"table columns differ in length from the {len(files)} file names")
-    return [TakeSegment.from_seconds(f, a, b, lag)
-            for f, a, b, lag in zip(files, cols[0], cols[1], cols[2])]
-
-
-def cs_table_note(text: str) -> str | None:
-    """The comment block right above the table — how the lags were measured."""
-    m = re.search(r"((?:[ \t]*//[^\n]*\n)+)[ \t]*static\s+readonly\s+string\[\]\s+(?:SEG_FILE|SEG_NAME|REC_NAMES)",
-                  text)
-    if not m:
-        return None
-    lines = [ln.strip()[2:].strip() for ln in m.group(1).splitlines()]
-    return " ".join(ln for ln in lines if ln) or None
-
-
-def migrate_cs(cs_path: Path, project_dir: Path, fps: float | None = None) -> VegasConfig:
-    text = cs_path.read_text(encoding="utf-8-sig")
-    takes = parse_cs_tables(text)
-    layout = project_dir / LAYOUT_TXT
-    header = parse_layout_header(layout.read_text(encoding="utf-8"))[0] if layout.exists() else {}
-    if fps is None and header.get("fps"):
-        fps = float(header["fps"])
-    note = cs_table_note(text)
-    note = f"From {cs_path.name}: {note}" if note else f"From {cs_path.name}"
-    vj = project_dir / VEGAS_JSON
-    write_vegas_config(vj, fps, header.get("audio"), takes, note)
-    if layout.exists():
-        sync_layout(project_dir, takes)
-    return parse_vegas_config(json.loads(vj.read_text(encoding="utf-8")), vj)
-
-
-# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 
@@ -285,26 +212,15 @@ def main(argv: list[str] | None = None) -> None:
     sub = ap.add_subparsers(dest="command", required=True)
     p = sub.add_parser("sync", help="vegas.json takes -> layout.txt header")
     p.add_argument("--project", required=True)
-    p = sub.add_parser("from-cs", help="old per-project loader table -> vegas.json + layout.txt")
-    p.add_argument("cs", type=Path)
-    p.add_argument("--project", required=True)
-    p.add_argument("--fps", type=float, default=None,
-                   help="default: fps= from the project's layout.txt")
     args = ap.parse_args(argv)
 
     project_dir = _project_dir(args.project)
     try:
-        if args.command == "sync":
-            cfg = find_vegas_config(project_dir)
-            if cfg is None:
-                sys.exit(f"No {VEGAS_JSON} in {project_dir} or its parents")
-            layout = sync_layout(project_dir, cfg.takes)
-            print(f"{len(cfg.takes)} take segments from {cfg.path} -> {layout}")
-        else:
-            cfg = migrate_cs(args.cs, project_dir, args.fps)
-            print(f"{len(cfg.takes)} take segments, fps {cfg.fps}, audio {cfg.audio!r} -> {cfg.path}")
-            if (project_dir / LAYOUT_TXT).exists():
-                print(f"take lines written into {project_dir / LAYOUT_TXT}")
+        cfg = find_vegas_config(project_dir)
+        if cfg is None:
+            sys.exit(f"No {VEGAS_JSON} in {project_dir} or its parents")
+        layout = sync_layout(project_dir, cfg.takes)
+        print(f"{len(cfg.takes)} take segments from {cfg.path} -> {layout}")
     except (ValueError, OSError) as exc:
         sys.exit(f"error: {exc}")
 

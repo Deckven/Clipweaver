@@ -1,23 +1,13 @@
-"""vegas.json -> layout.txt take lines, and the migration of the old loaders.
-
-Until 2026-10-27 each raw-take project had its own copy of the Vegas loader
-with a hand-typed SEG_* / REC_* lag table. The tables now live in vegas.json;
-layout.py and `vegas_takes sync` copy them into layout.txt. These tests pin
-the Python side; tests/test_vegas_loader.py runs the C# loader itself.
-"""
+"""vegas.json -> layout.txt take lines. These tests pin the Python side;
+tests/test_vegas_loader.py runs the C# loader itself."""
 
 import json
-import re
-from pathlib import Path
 
 import pytest
 
 from clipmaker import config, layout, vegas_takes
 from clipmaker.vegas_takes import TakeSegment
 
-ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "vegas_scripts"
-PIN = re.compile(r'LAYOUT_FILE = @"[^"]*[\\/]projects[\\/](.*)[\\/]layout\.txt"')
 
 
 # --- unit ------------------------------------------------------------------
@@ -37,41 +27,10 @@ def test_bad_segments_are_refused(args):
         TakeSegment.from_seconds(*args)
 
 
-SEG_CS = """
-    // Where each piece sits.
-    // Measured by hand.
-    static readonly string[] SEG_FILE = {
-        "Recording 1.mp3", "Recording 1.mp3" };
-    static readonly double[] SEG_FROM = {
-        0.00, 12.50 };
-    static readonly double[] SEG_TO = {
-        12.50, 50.46 };
-    static readonly double[] SEG_LAG = {
-        -0.477, 4.221 };
-"""
-REC_CS = """
-    static readonly string[] REC_NAMES = { "Intro.mp3", "Recording 1.mp3" };
-    static readonly double[] REC_LAG = { -0.405, 14.675 };
-    static readonly double[] REC_USED = { 9.77, 64.75 };
-"""
-
-
-def test_cs_tables_in_both_old_forms():
-    assert vegas_takes.parse_cs_tables(SEG_CS) == [
-        TakeSegment("Recording 1.mp3", 0, 12500, -477),
-        TakeSegment("Recording 1.mp3", 12500, 50460, 4221)]
-    assert vegas_takes.parse_cs_tables(SEG_CS.replace("SEG_FILE", "SEG_NAME"))[1].lag_ms == 4221
-    assert vegas_takes.parse_cs_tables(REC_CS) == [
-        TakeSegment("Intro.mp3", 0, 9770, -405),
-        TakeSegment("Recording 1.mp3", 0, 64750, 14675)]
-    assert vegas_takes.cs_table_note(SEG_CS) == "Where each piece sits. Measured by hand."
-
-
-def test_cs_table_with_ragged_columns_is_refused():
-    with pytest.raises(ValueError):
-        vegas_takes.parse_cs_tables(SEG_CS.replace("-0.477, 4.221", "-0.477"))
-    with pytest.raises(ValueError):
-        vegas_takes.parse_cs_tables("no table here")
+SEG = [TakeSegment("Recording 1.mp3", 0, 12500, -477),
+       TakeSegment("Recording 1.mp3", 12500, 50460, 4221)]
+REC = [TakeSegment("Intro.mp3", 0, 9770, -405),
+       TakeSegment("Recording 1.mp3", 0, 64750, 14675)]
 
 
 LAYOUT = """# clipmaker layout v1 — p
@@ -86,7 +45,7 @@ fade_ms=400
 
 
 def test_set_layout_takes_replaces_only_the_take_lines():
-    takes = vegas_takes.parse_cs_tables(SEG_CS)
+    takes = SEG
     once = vegas_takes.set_layout_takes(LAYOUT, takes)
     assert vegas_takes.set_layout_takes(once, takes) == once  # idempotent
     header, parsed = vegas_takes.parse_layout_header(once)
@@ -99,7 +58,7 @@ def test_vegas_json_is_found_in_a_parent_folder(tmp_path):
     proj = tmp_path / "eve" / "drafts" / "x"
     (proj / "overlays").mkdir(parents=True)
     vegas_takes.write_vegas_config(proj / "vegas.json", 59.94, "x.mp3",
-                                   vegas_takes.parse_cs_tables(REC_CS), "note")
+                                   REC, "note")
     cfg = vegas_takes.find_vegas_config(proj / "overlays", root=tmp_path)
     assert (cfg.fps, cfg.audio, len(cfg.takes)) == (59.94, "x.mp3", 2)
     assert vegas_takes.find_vegas_config(tmp_path / "eve", root=tmp_path) is None
@@ -108,7 +67,7 @@ def test_vegas_json_is_found_in_a_parent_folder(tmp_path):
 def test_write_keeps_unknown_keys_and_one_take_per_line(tmp_path):
     vj = tmp_path / "vegas.json"
     vj.write_text(json.dumps({"fps": 60, "comment": "keep me"}), encoding="utf-8")
-    vegas_takes.write_vegas_config(vj, None, None, vegas_takes.parse_cs_tables(REC_CS))
+    vegas_takes.write_vegas_config(vj, None, None, REC)
     text = vj.read_text(encoding="utf-8")
     data = json.loads(text)
     assert data["fps"] == 60 and data["comment"] == "keep me" and len(data["takes"]) == 2
@@ -130,7 +89,7 @@ def test_layout_fps_comes_from_vegas_json_unless_given(tmp_path, capsys):
 
 
 def test_rendered_layout_carries_the_takes():
-    takes = tuple(vegas_takes.parse_cs_tables(SEG_CS))
+    takes = tuple(SEG)
     text = layout.render_layout_txt(layout.LayoutResult(), "p", "narr.mp3", 60, "T", 400, takes)
     assert vegas_takes.parse_layout_header(text)[1] == list(takes)
     assert text.index("take=") < text.index("---")
@@ -142,57 +101,7 @@ def test_sync_cli(tmp_path, monkeypatch):
     proj.mkdir()
     (proj / "layout.txt").write_text(LAYOUT, encoding="utf-8")
     vegas_takes.write_vegas_config(proj / "vegas.json", 59.94, None,
-                                   vegas_takes.parse_cs_tables(SEG_CS))
+                                   SEG)
     vegas_takes.main(["sync", "--project", "p"])
     assert len(vegas_takes.parse_layout_header(
         (proj / "layout.txt").read_text(encoding="utf-8"))[1]) == 2
-
-
-# --- the migrated projects in this repo ---------------------------------------
-
-def old_loaders() -> list[Path]:
-    """Every per-project loader in the repo that carries a lag table."""
-    found = []
-    for cs in sorted(SCRIPTS.glob("*.cs")) + sorted((SCRIPTS / "_archive").glob("*.cs")):
-        text = cs.read_text(encoding="utf-8-sig")
-        if re.search(r"\b(SEG_FILE|SEG_NAME|REC_NAMES)\b", text) and PIN.search(text):
-            found.append(cs)
-    return found
-
-
-def project_of(cs: Path) -> Path:
-    rel = PIN.search(cs.read_text(encoding="utf-8-sig")).group(1).replace("\\", "/")
-    return config.PROJECTS_DIR / rel
-
-
-def migrated_projects() -> list[Path]:
-    return sorted(p.parent for p in config.PROJECTS_DIR.rglob("vegas.json"))
-
-
-def test_there_is_something_to_check():
-    # The public export ships neither the per-project loaders (_archive/) nor
-    # projects/; the guard against a vacuous pass only makes sense where they live.
-    if not (SCRIPTS / "_archive").is_dir():
-        pytest.skip("public export: per-project loaders and projects are not published")
-    assert len(old_loaders()) >= 6
-    assert len(migrated_projects()) >= 6
-
-
-@pytest.mark.parametrize("cs", old_loaders(), ids=lambda p: p.stem[:40])
-def test_old_lag_table_equals_the_projects_vegas_json(cs):
-    cfg = vegas_takes.find_vegas_config(project_of(cs))
-    assert cfg is not None, f"no vegas.json for {cs.name}: run vegas_takes from-cs"
-    assert list(cfg.takes) == vegas_takes.parse_cs_tables(cs.read_text(encoding="utf-8-sig"))
-
-
-@pytest.mark.parametrize("proj", migrated_projects(), ids=lambda p: p.name[:40])
-def test_layout_txt_carries_the_vegas_json_takes(proj):
-    lay = proj / "layout.txt"
-    if not lay.exists():
-        pytest.skip("no layout.txt on this branch")
-    cfg = vegas_takes.find_vegas_config(proj)
-    header, takes = vegas_takes.parse_layout_header(lay.read_text(encoding="utf-8"))
-    assert takes == list(cfg.takes), "run: python -m clipmaker.vegas_takes sync --project ..."
-    assert float(header["fps"]) == pytest.approx(cfg.fps)
-    if cfg.audio:
-        assert header["audio"] == cfg.audio

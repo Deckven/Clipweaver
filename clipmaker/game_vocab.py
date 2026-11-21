@@ -6,6 +6,9 @@ without helping much — the goal is to nudge the model toward correct names,
 not to enumerate every entity.
 """
 
+import re
+from difflib import SequenceMatcher
+
 ELDEN_RING = {
     "description": (
         "Elden Ring is a dark-fantasy action RPG. Typical visual scenes: a knight "
@@ -324,9 +327,6 @@ def render_vocab_hint(vocab: dict) -> str:
 
 
 # ---------------- Path-based entity matching ----------------
-
-import re
-from difflib import SequenceMatcher
 
 
 def _norm(s: str) -> str:

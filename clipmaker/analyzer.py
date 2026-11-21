@@ -16,7 +16,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PIL import Image
+from . import config
+from .game_vocab import vocab_for, render_vocab_hint, match_entities, match_region
 
 
 class _LazyTorch:
@@ -41,9 +42,6 @@ def _empty_cuda_cache() -> None:
     loaded = sys.modules.get("torch")
     if loaded is not None and loaded.cuda.is_available():
         loaded.cuda.empty_cache()
-
-from . import config
-from .game_vocab import vocab_for, render_vocab_hint, match_entities, match_region
 
 
 VIDEO_EXTS = {".mp4", ".mkv", ".avi", ".mov", ".webm"}
@@ -220,8 +218,8 @@ def _build_user_prompt(n_frames: int, duration_sec: int, interval: int,
     game_desc = (path_hints or {}).get("game_description") or ""
     if game_desc:
         parts.append("")
-        parts.append(f"Game description (ground the visuals in this — do not "
-                     f"default to a different genre):")
+        parts.append("Game description (ground the visuals in this — do not "
+                     "default to a different genre):")
         parts.append(game_desc)
 
     fact_lines = []
@@ -1032,7 +1030,7 @@ def analyze_video(
         )
         per_frame_ocr = [filter_noise(lines) for lines in raw_per_frame]
         ocr_lines = dedupe_preserving_order(per_frame_ocr)
-        frames_with_text = sum(1 for l in per_frame_ocr if l)
+        frames_with_text = sum(1 for ln in per_frame_ocr if ln)
         print(f"  OCR: {len(ocr_lines)} unique lines  |  "
               f"{frames_with_text}/{len(frame_paths)} frames with text")
         release_ocr()

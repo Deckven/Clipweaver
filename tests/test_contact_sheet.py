@@ -1,6 +1,5 @@
 """Contact sheet planning and rendering (no ffmpeg involved)."""
 
-from pathlib import Path
 
 from clipmaker.contact_sheet import frame_times, render_html, sheet_row
 

@@ -163,16 +163,22 @@ def _load_games(local=None) -> tuple[dict, str]:
 GAMES, DEFAULT_GAME = _load_games()
 
 
-def get_project_dir(project_name: str) -> Path:
-    """Return path to a project folder, creating it if needed.
-
-    A name starting with '-' is a CLI flag that a positional-argument parser
-    took for the project (``align --project x`` once created projects/--project,
-    ``align --help`` projects/--help) — refuse it instead of creating a folder."""
+def project_path(project_name: str) -> Path:
+    """projects/<name>, not created. Refuses a name that looks like a CLI flag (a
+    positional-argument parser took ``--help`` for the project) and a name that
+    leads outside PROJECTS_DIR (``../x``, an absolute path)."""
     if not project_name or project_name.startswith("-"):
         raise ValueError(
             f"project name {project_name!r} looks like a command-line flag, "
             "not a project folder — check the command's usage")
     p = PROJECTS_DIR / project_name
+    if not p.resolve().is_relative_to(PROJECTS_DIR.resolve()):
+        raise ValueError(f"project name {project_name!r} points outside {PROJECTS_DIR}")
+    return p
+
+
+def get_project_dir(project_name: str) -> Path:
+    """Return path to a project folder, creating it if needed (see project_path)."""
+    p = project_path(project_name)
     p.mkdir(parents=True, exist_ok=True)
     return p

@@ -96,7 +96,8 @@ def timeline_from(takes, zero_ms: float) -> list[tuple[str, float, float, float]
 
 def old_anchor(cs_text: str, pieces) -> float:
     """What the old per-project FindStartFromRecordings computed (three variants)."""
-    segs = vegas_takes.parse_cs_tables(cs_text)
+    from clipmaker import vegas_migrate  # private module; only the author's old loaders reach here
+    segs = vegas_migrate.parse_cs_tables(cs_text)
     middle_rule = "SEG_NAME" in cs_text  # Gold and Mats: the piece's middle picks the segment
     rec_rule = "REC_NAMES" in cs_text    # REC: any piece starting before USED
     zeros = []

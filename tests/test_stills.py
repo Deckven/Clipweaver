@@ -114,6 +114,24 @@ def test_grab_seeks_input_side_and_scales_to_width():
     assert vf == "scale='min(1920,iw)':-2"
 
 
+def test_local_input_is_file_only_remote_keeps_network():
+    local = build_grab_cmd("concat:a.mp4|b.mp4", 1, Path("o.jpg"), width=1280, crop=None)
+    assert local[local.index("-protocol_whitelist") + 1] == "file"
+    assert local.index("-protocol_whitelist") < local.index("-i")
+    remote = build_grab_cmd("https://example.com/v.mp4", 1, Path("o.jpg"), width=1280, crop=None)
+    assert "-protocol_whitelist" not in remote
+
+
+def test_fetch_refuses_non_http_and_oversized(tmp_path, monkeypatch):
+    with pytest.raises(ValueError):
+        fetch("file:///etc/passwd", tmp_path / "a.png")
+    monkeypatch.setattr("clipmaker.stills.MAX_FETCH_BYTES", 10)
+    monkeypatch.setattr("clipmaker.stills.requests.get",
+                        lambda *a, **k: _FakeResponse(b"x" * 64, "image/png"))
+    with pytest.raises(RuntimeError, match="larger than"):
+        fetch("https://example.com/a.png", tmp_path / "a.png")
+
+
 def test_grab_applies_crop_before_scale():
     cmd = build_grab_cmd("src.mp4", 1, Path("o.jpg"), width=1920,
                          crop=(1920, 810, 0, 135))
@@ -241,6 +259,10 @@ class _FakeResponse:
     def __init__(self, content, content_type):
         self.content = content
         self.headers = {"Content-Type": content_type}
+
+    def iter_content(self, chunk_size=1):
+        for i in range(0, len(self.content), chunk_size):
+            yield self.content[i:i + chunk_size]
 
     def raise_for_status(self):
         pass

@@ -95,6 +95,18 @@ def is_remote(src: str | Path) -> bool:
     return isinstance(src, str) and src.startswith(("http://", "https://"))
 
 
+def _input_args(src: str | Path) -> list[str]:
+    """``-i src`` for ffmpeg. A local source may only be a file: without the
+    whitelist a name like ``concat:a|b`` or ``subfile,,...`` would be read as an
+    ffmpeg protocol. Remote URLs keep ffmpeg's default network protocols."""
+    if is_remote(src):
+        return ["-i", str(src)]
+    return ["-protocol_whitelist", "file", "-i", str(src)]
+
+
+MAX_FETCH_BYTES = 50 * 1024 * 1024
+
+
 def crop_from_detect(stderr: str, width: int, height: int) -> tuple[int, int, int, int] | None:
     """Crop box from ffmpeg ``cropdetect`` output, or None when there are no bars.
 
@@ -134,7 +146,7 @@ def build_grab_cmd(src: str, at_sec: float, out: Path, width: int,
         filters.append("crop={}:{}:{}:{}".format(*crop))
     filters.append(f"scale='min({width},iw)':-2")
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-           "-ss", f"{at_sec:.3f}", "-i", str(src),
+           "-ss", f"{at_sec:.3f}", *_input_args(src),
            "-frames:v", "1", "-vf", ",".join(filters)]
     if out.suffix.lower() in (".jpg", ".jpeg"):
         cmd += ["-q:v", "2"]
@@ -210,7 +222,7 @@ def probe(media: str) -> tuple[int, int, float]:
 
 def detect_crop(media: str, at_sec: float) -> tuple[int, int, int, int] | None:
     width, height, _ = probe(media)
-    result = _run(["ffmpeg", "-hide_banner", "-ss", f"{max(at_sec - 1, 0):.3f}", "-i", media,
+    result = _run(["ffmpeg", "-hide_banner", "-ss", f"{max(at_sec - 1, 0):.3f}", *_input_args(media),
                    "-t", "2", "-vf", "cropdetect=limit=24:round=2:reset=0", "-f", "null", "-"],
                   FFMPEG_TIMEOUT)
     if result.returncode != 0:
@@ -356,12 +368,19 @@ def fetch(url: str, out: Path) -> Path:
     fmt = _SAVE_FORMATS.get(Path(out).suffix.lower())
     if fmt is None:
         raise ValueError(f"output must be one of {sorted(_SAVE_FORMATS)}, got {out}")
-    resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+    if not is_remote(url):
+        raise ValueError(f"not an http(s) URL: {url}")
+    resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30, stream=True)
     resp.raise_for_status()
     content_type = resp.headers.get("Content-Type", "").split(";")[0].strip()
     if content_type not in RASTER_TYPES:
         raise RuntimeError(f"not a raster image: {url} ({content_type or 'no type'})")
-    with Image.open(io.BytesIO(resp.content)) as img:
+    body = bytearray()
+    for chunk in resp.iter_content(chunk_size=1 << 16):
+        body += chunk
+        if len(body) > MAX_FETCH_BYTES:
+            raise RuntimeError(f"image larger than {MAX_FETCH_BYTES // 2**20} MB: {url}")
+    with Image.open(io.BytesIO(bytes(body))) as img:
         image = img.convert("RGB") if fmt == "JPEG" else img.copy()
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
