@@ -1,5 +1,5 @@
 {
-  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4",
+  "source_path": "footage/raw/Assassin's Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4",
   "original_name": "Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4",
   "duration_sec": 524,
   "frame_interval_sec": 5,
@@ -10,23 +10,13 @@
   "ocr_text": [
     "World Without Gold",
     "Destroy Maynard'$ armada",
-    "Nol Don't tell me",
-    "Jesus Christl",
     "717m",
-    "We Il get them, Anne. But",
-    "we have to go,",
-    "nowl",
     "Destroy Maynard",
     "arada",
-    "There'$ going to be",
     "Reckoning",
-    "for this Edward",
-    "mean",
     "333m1",
     "Destroy Maynard $ armada",
     "Let fall the Courses and trim the Topsail",
-    "lads! We've",
-    "Bastard to catch!",
     "Show Information",
     "Camera",
     "Camnera Roll",
@@ -72,29 +62,16 @@
     "Disable the HMS Ipswich",
     "Barrel",
     "Mortar Ammo",
-    "This is what Maynard was building:",
-    "Not just an Armada, this floating",
-    "damned Fortress",
     "The Bastard'$ been ahead",
-    "of us the whole time",
     "Roales",
     "X17",
-    "It'$ that bloody Armor,",
-    "We can't breach itl",
     "Can' t use Travel Sails in storms",
     "USC",
-    "ravel Sails in storms",
-    "Target the Mines! They'Il",
-    "hit below the Waterlinel",
     "HMS",
     "pswich",
     "Cloth",
-    "Can't use Travel Sails in storms",
-    "There's no use trying to",
-    "get past that Armor.",
     "That Armor'$ too strongl",
     "That Armor\"$ too strongl",
-    "Target the Barrels!",
     "Rescue"
   ],
   "title": "Battle Against HMS Ipswich",
@@ -137,7 +114,7 @@
     {
       "start": "00:00",
       "end": "00:05",
-      "caption": "World Without Gold; Destroy Maynard'$ armada; Nol Don't tell me; Jesus Christl",
+      "caption": "World Without Gold; Destroy Maynard'$ armada",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -145,7 +122,7 @@
     {
       "start": "00:05",
       "end": "00:10",
-      "caption": "717m; World Without Gold; Destroy Maynard'$ armada; We Il get them, Anne. But; we have to go,; nowl",
+      "caption": "717m; World Without Gold; Destroy Maynard'$ armada",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -153,7 +130,7 @@
     {
       "start": "00:10",
       "end": "00:15",
-      "caption": "World Without Gold; Destroy Maynard; arada; There'$ going to be; Reckoning; for this Edward; mean",
+      "caption": "World Without Gold; Destroy Maynard; arada; Reckoning",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -161,7 +138,7 @@
     {
       "start": "00:15",
       "end": "00:20",
-      "caption": "333m1; World Without Gold; Destroy Maynard $ armada; Let fall the Courses and trim the Topsail; lads! We've; Bastard to catch!",
+      "caption": "333m1; World Without Gold; Destroy Maynard $ armada; Let fall the Courses and trim the Topsail",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -409,7 +386,7 @@
     {
       "start": "03:05",
       "end": "03:10",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Barrel; Mortar Ammo; This is what Maynard was building:",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Barrel; Mortar Ammo",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -417,7 +394,7 @@
     {
       "start": "03:10",
       "end": "03:15",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Not just an Armada, this floating; damned Fortress",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -425,7 +402,7 @@
     {
       "start": "03:15",
       "end": "03:20",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; The Bastard'$ been ahead; of us the whole time",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; The Bastard'$ been ahead",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -457,7 +434,7 @@
     {
       "start": "03:35",
       "end": "03:40",
-      "caption": "HMS Ipswich; Disable the HMS Ipswich; It'$ that bloody Armor,; We can't breach itl",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -473,7 +450,7 @@
     {
       "start": "03:45",
       "end": "03:50",
-      "caption": "HMS Ipswich; Disable the HMS Ipswich; USC; ravel Sails in storms",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich; USC",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -481,7 +458,7 @@
     {
       "start": "03:50",
       "end": "03:55",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Loot; Target the Mines! They'Il; hit below the Waterlinel",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Loot",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -489,7 +466,7 @@
     {
       "start": "03:55",
       "end": "04:00",
-      "caption": "HMS; pswich; World Without Gold; Disable the HMS Ipswich; Spice; Tobacco; Cloth; Can't use Travel Sails in storms; There's no use trying to; get past that Armor.",
+      "caption": "HMS; pswich; World Without Gold; Disable the HMS Ipswich; Spice; Tobacco; Cloth",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -545,7 +522,7 @@
     {
       "start": "05:25",
       "end": "05:30",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Target the Barrels!",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -617,7 +594,7 @@
     {
       "start": "07:00",
       "end": "07:05",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Target the Barrels!",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -633,7 +610,7 @@
     {
       "start": "07:15",
       "end": "07:20",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms; Rescue",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Rescue",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -673,7 +650,7 @@
     {
       "start": "08:15",
       "end": "08:20",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms; That Armor'$ too strongl",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor'$ too strongl",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -689,7 +666,7 @@
     {
       "start": "08:35",
       "end": "08:44",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -902,8 +879,8 @@
     }
   ],
   "path_hints": {
-    "location": "Assassin’s Creed IV Black Flag Resynced",
-    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "location": "Assassin's Creed IV Black Flag Resynced",
+    "location_folder": "Assassin's Creed IV Black Flag Resynced",
     "entities": []
   },
   "suggested_filename": "Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich.mp4"

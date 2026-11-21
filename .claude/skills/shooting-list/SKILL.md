@@ -37,7 +37,7 @@ For each fragment, search the VLM catalog for matching footage:
 
 ```python
 from clipmaker.report import _load_catalog, search_catalog
-catalog = _load_catalog("eve_online")
+catalog = _load_catalog("assassins_creed_4")
 matches = search_catalog(fragment_text, catalog, max_results=3)
 ```
 

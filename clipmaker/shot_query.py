@@ -14,7 +14,7 @@ content should produce no queries rather than a forced guess, so the gap shows
 up in the storyboard instead of being papered over with a wrong clip.
 
 CLI:
-    python -m clipmaker.shot_query "фрагмент нарации" --game eve_online
+    python -m clipmaker.shot_query "The crew sails into a storm to finish the armada" --game assassins_creed_4
 """
 from __future__ import annotations
 

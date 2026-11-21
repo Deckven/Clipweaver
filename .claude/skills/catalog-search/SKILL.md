@@ -15,22 +15,11 @@ Find specific visual content across all indexed videos.
 
 ```
 catalog/
-  elden_ring_videos/          — Elden Ring
-  eve_online_videos/          — EVE Online (incl. Fanfest 2026)
-    gallente_elections/
-    fanfest_2026/
-  eve_frontier_videos/        — EVE Frontier
-    fanfest_2026/
-  eve_vanguard_videos/        — EVE Vanguard
-  diablo4_videos/             — Diablo IV
-    vessel_of_hatred_seasons/
-    butcher_season/
-    lord_of_hatred_warlock/
-    lord_of_hatred_paladin/
-  diablo_videos/              — Diablo I/II/III
-  black_myth_wukong_videos/   — Black Myth: Wukong
-  ghost_of_yotei_videos/      — Ghost of Yotei
-  clair_obscure_videos/       — Clair Obscure: Expedition 33
+  <game>_videos/              — one folder per key in GAMES (catalog_subdir)
+    <subfolder>/              — mirrors the capture subfolders (subdir_overrides renames them)
+  _index/                     — semantic index (embed_index build)
+
+The bundled sample: examples/sample/catalog/assassins_creed_4_videos/ (4 entries).
 ```
 
 ## Searchable Fields
@@ -55,19 +44,20 @@ works across languages — a Russian query finds English scene descriptions.
 
 ```bash
 python -m clipmaker.embed_index build              # once, ~9 s on GPU
-python -m clipmaker.embed_index search "интерфейс маркета, цены на предметы" --game eve_online
+python -m clipmaker.embed_index search "harbour menu with ship upgrades and their prices" --game assassins_creed_4
+# any language works: "меню гавани, улучшения корабля" (Russian for the same) finds the same clip
 python -m clipmaker.embed_index stats
 ```
 
 ```python
 from clipmaker import embed_index
 
-for hit in embed_index.search("safety settings menu", game="eve_online", k=5):
+for hit in embed_index.search("diving underwater past a reef", game="assassins_creed_4", k=5):
     print(hit.score, hit.timecode, hit.original_name, hit.text)
 ```
 
 **Write queries as descriptions of the picture, not of the topic.**
-"варп-тоннель, голубые полосы" works; "экономика нулевых секторов" does not —
+"ship firing broadsides in a storm" works; "the economy of piracy" does not —
 the catalog describes what is on screen. To go from narration to such a query,
 use `shot_query.build_shot_queries(fragment, game=...)` (needs Ollama).
 
@@ -76,7 +66,7 @@ compressed and passes nonsense. Zero results is a real answer: no footage matche
 
 Rebuild after indexing new videos — incremental, only changed files are re-embedded:
 ```bash
-python -m clipmaker.embed_index build --game eve_online
+python -m clipmaker.embed_index build --game assassins_creed_4
 ```
 
 ## Token-Overlap Search (fallback)
@@ -87,21 +77,21 @@ the right video by proper noun and never identifies a moment.
 ```python
 from clipmaker.report import _load_catalog, search_catalog
 
-catalog = _load_catalog("eve_online")
-results = search_catalog("Amarr laser weapon", catalog, max_results=5)
+catalog = _load_catalog("assassins_creed_4")
+results = search_catalog("harbourmaster upgrade", catalog, max_results=5)
 ```
 
 ## Manual Search (grep)
 
 ```bash
 # Find videos with a specific tag
-grep -rl "amarr" catalog/eve_online_videos/ --include="*.json"
+grep -rl "harbormaster" catalog/assassins_creed_4_videos/ --include="*.json"
 
 # Find OCR text
-grep -rl "Fanfest" catalog/ --include="*.json"
+grep -rl "HARBOURMASTER" catalog/ --include="*.json"
 
 # Find scenes of a specific type
-grep -l "concept_art" catalog/eve_vanguard_videos/ --include="*.json"
+grep -l "\"ui\"" catalog/assassins_creed_4_videos/ --include="*.json"
 ```
 
 ## Tips

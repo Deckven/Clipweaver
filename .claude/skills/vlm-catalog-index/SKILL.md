@@ -15,16 +15,16 @@ Index videos into the catalog via VLM frame analysis.
 
 ```bash
 # Single video (default interval from config.py)
-python -m clipmaker.analyzer video.mp4 --game eve_online
+python -m clipmaker.analyzer video.mp4 --game assassins_creed_4
 
 # With explicit interval
-python -m clipmaker.analyzer video.mp4 --game diablo4 --interval 5
+python -m clipmaker.analyzer video.mp4 --game assassins_creed_4 --interval 5
 
 # Re-index (overwrite existing JSON)
-python -m clipmaker.analyzer video.mp4 --game eve_online --interval 5 --force
+python -m clipmaker.analyzer video.mp4 --game assassins_creed_4 --interval 5 --force
 
-# Scan entire folder
-python -m clipmaker.analyzer --game eve_online --scan
+# Every capture in the game's video_dirs (already indexed files are skipped)
+python -m clipmaker.analyzer --game assassins_creed_4 --interval 5
 ```
 
 ## Frame Interval

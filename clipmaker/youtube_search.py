@@ -3,9 +3,11 @@ Search YouTube videos by text query using yt-dlp.
 Supports both single queries and large text blocks (split into fragments).
 """
 
+import importlib.util
+import json
 import re
 import subprocess
-import json
+import sys
 
 
 # Russian and English stop words for query extraction
@@ -21,10 +23,25 @@ _STOP_WORDS = set(
 )
 
 
+_missing_warned = False
+
+
+def _ytdlp_cmd() -> list[str]:
+    """yt-dlp from this interpreter if it is installed here (works in a venv that
+    is not activated), else the executable on PATH."""
+    if importlib.util.find_spec("yt_dlp") is not None:
+        return [sys.executable, "-m", "yt_dlp"]
+    return ["yt-dlp"]
+
+
 def search_youtube(query: str, max_results: int = 10) -> list[dict]:
-    """Search YouTube and return list of video info dicts."""
+    """Search YouTube and return list of video info dicts.
+
+    Without yt-dlp the search returns an empty list and says so once, so a
+    storyboard or plan is still written from the local catalog."""
+    global _missing_warned
     cmd = [
-        "yt-dlp",
+        *_ytdlp_cmd(),
         f"ytsearch{max_results}:{query}",
         "--dump-json",
         "--flat-playlist",
@@ -37,9 +54,10 @@ def search_youtube(query: str, max_results: int = 10) -> list[dict]:
             cmd, capture_output=True, text=True, timeout=60, encoding="utf-8"
         )
     except FileNotFoundError:
-        raise RuntimeError(
-            "yt-dlp not found. Install it: pip install yt-dlp"
-        )
+        if not _missing_warned:
+            print('[yt-dlp] not installed, YouTube search skipped (pip install -e ".[youtube]")')
+            _missing_warned = True
+        return []
     except subprocess.TimeoutExpired:
         print(f"[yt-dlp] Timeout for query: {ascii(query)}")
         return []
@@ -215,11 +233,16 @@ def search_youtube_for_text(
 
 
 if __name__ == "__main__":
-    import sys
-    query = " ".join(sys.argv[1:]) or "elden ring boss fight"
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Search YouTube by text query (yt-dlp, nothing is downloaded)")
+    ap.add_argument("query", nargs="+", help="search words")
+    ap.add_argument("-n", "--max-results", type=int, default=10)
+    args = ap.parse_args()
+    query = " ".join(args.query)
     print(f"Searching YouTube for: {query}\n")
 
-    results = search_youtube(query)
+    results = search_youtube(query, max_results=args.max_results)
     for i, v in enumerate(results, 1):
         views = format_view_count(v["view_count"])
         print(f"{i:3d}. [{v['duration']}] {v['title']}")

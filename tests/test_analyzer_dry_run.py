@@ -34,7 +34,7 @@ def setup(tmp_path, monkeypatch):
 
     monkeypatch.setattr(analyzer, "analyze_video", boom)
     monkeypatch.setattr(analyzer, "load_vlm", boom)
-    monkeypatch.setattr(analyzer.torch.cuda, "is_available", boom)
+    monkeypatch.setattr(analyzer, "_cuda_available", boom)
 
     (videos / "new clip.mp4").write_bytes(b"")
     (videos / "sub" / "nested clip.mp4").write_bytes(b"")

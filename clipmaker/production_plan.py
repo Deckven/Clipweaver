@@ -6,7 +6,7 @@ duration, searches local catalog + YouTube + stock footage, and produces
 a structured plan with gap analysis and shooting priorities.
 
 Usage:
-    python production_plan.py "filename.md" [game]
+    python -m clipmaker.production_plan <project> [game]
 """
 from __future__ import annotations
 
@@ -317,9 +317,17 @@ def save_plan(plan: dict, project: str) -> tuple[Path, Path]:
 
 
 if __name__ == "__main__":
+    import argparse
     import sys
 
-    if len(sys.argv) < 2:
+    ap = argparse.ArgumentParser(
+        description="Production plan for projects/<project>/text.md: shot type and duration per "
+                    "fragment, coverage from the catalog, YouTube and stock, a shooting list")
+    ap.add_argument("project", nargs="?", help="project folder under projects/ (omit to list projects)")
+    ap.add_argument("game", nargs="?", help="game key from GAMES (default: detected from the project path)")
+    args = ap.parse_args()
+
+    if not args.project:
         projects = list_projects()
         if projects:
             print("Available projects:")
@@ -329,8 +337,8 @@ if __name__ == "__main__":
             print(f"No projects in {config.PROJECTS_DIR}")
         sys.exit(0)
 
-    project = sys.argv[1]
-    game = sys.argv[2] if len(sys.argv) > 2 else _detect_game(project)
+    project = args.project
+    game = args.game or _detect_game(project)
     text = read_project_text(project)
 
     print(f"Generating production plan: {project} ({len(text.split())} words)")

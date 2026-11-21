@@ -59,7 +59,8 @@ catalog/_index/            # semantic index, written by embed_index build
 projects/<project>/        # one folder per video you are making (CLIPMAKER_PROJECTS_DIR)
 ```
 
-All four locations can be moved with the variables in `.env`.
+The variables in `.env` move the captures, the catalog and the projects; the
+index always sits inside the catalog folder.
 
 A game is a key in `GAMES`. Out of the box it holds one, the sample
 `assassins_creed_4`. Put your own games in `clipmaker/games_local.py`; when that
@@ -93,12 +94,27 @@ model and the picture queries use the right names.
 ## 4. Ten-minute tour on the sample (no GPU)
 
 `examples/sample/` holds four catalog entries of the author's own Assassin's
-Creed IV captures (no video) and a four-paragraph narration. Run from the
-repository root:
+Creed IV captures (no video) and a four-paragraph narration. Install once:
 
 ```bash
-export CLIPMAKER_CATALOG_DIR=examples/sample/catalog      # PowerShell: $env:CLIPMAKER_CATALOG_DIR="examples/sample/catalog"
-export CLIPMAKER_PROJECTS_DIR=/tmp/clipmaker-projects     # PowerShell: $env:CLIPMAKER_PROJECTS_DIR="$env:TEMP\clipmaker-projects"
+# CPU-only torch is enough here; then the package with semantic search and YouTube
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -e ".[search,youtube]"
+```
+
+The storyboard step also searches YouTube through yt-dlp and needs network;
+without it, that part is skipped. Then, from the repository root:
+
+```bash
+# bash
+export CLIPMAKER_CATALOG_DIR=examples/sample/catalog
+export CLIPMAKER_PROJECTS_DIR=/tmp/clipmaker-projects
+```
+
+```powershell
+# PowerShell
+$env:CLIPMAKER_CATALOG_DIR = "examples/sample/catalog"
+$env:CLIPMAKER_PROJECTS_DIR = "$env:TEMP\clipmaker-projects"
 ```
 
 **1. Exact on-screen text.** Which moments show the harbourmaster menu:
@@ -129,17 +145,36 @@ cutoff, which only means something on a full-size catalog.
 **3. A storyboard from a narration.**
 
 ```bash
-mkdir -p /tmp/clipmaker-projects/ac4_demo
-cp examples/sample/narration.md /tmp/clipmaker-projects/ac4_demo/text.md
+# bash
+mkdir -p "$CLIPMAKER_PROJECTS_DIR/ac4_demo"
+cp examples/sample/narration.md "$CLIPMAKER_PROJECTS_DIR/ac4_demo/text.md"
+python -m clipmaker.report ac4_demo assassins_creed_4
+```
+
+```powershell
+# PowerShell
+New-Item -ItemType Directory -Force "$env:CLIPMAKER_PROJECTS_DIR\ac4_demo" | Out-Null
+Copy-Item examples/sample/narration.md "$env:CLIPMAKER_PROJECTS_DIR\ac4_demo\text.md"
 python -m clipmaker.report ac4_demo assassins_creed_4
 ```
 
 `report` writes `storyboard.md` (readable) and `moments.json` (what the next
 steps cut from) into the project folder. Paragraphs are merged into fragments
-of at least 40 words, so this short sample becomes one fragment. With Ollama
-running, the storyboard also shows the picture queries written for it; without
-it, the fragment text itself is searched. On four clips the top pick can be the
-wrong one — that is what the curation and the contact sheet in section 5 are for.
+of at least 40 words, so this short sample becomes one fragment.
+
+- **With Ollama running,** the storyboard shows the picture queries written for
+  the fragment and, under "My videos", a moment with timecodes for each pick.
+  On four clips the top pick can be the wrong one — that is what the curation
+  and the contact sheet in section 5 are for.
+- **Without Ollama,** there are no picture queries; "My videos" lists keyword
+  matches by video, without a moment.
+
+The `Search query` line is the keyword query used for YouTube and the keyword
+fallback — a bag of the fragment's proper nouns, not a sentence.
+
+To see why picture queries matter, compare the first paragraph of
+`examples/sample/narration.md` with its picture description in
+`examples/sample/shots.json`, each searched with `embed_index search`.
 
 The rest of the pipeline needs your own footage and a recorded narration.
 
@@ -198,8 +233,8 @@ Read `storyboard.md`: for each fragment — the text, the picture queries, your
 best moments with timecodes and why they matched, and YouTube results.
 `moments.json` keeps the same picks in machine form.
 
-An empty "My videos" section does not prove the footage is missing: events are
-often titled with codes and names the narration never uses. Search those names
+An empty "My videos" section does not prove the footage is missing: captures
+are often named after places, items or events the narration never mentions. Search those names
 directly with `ocrgrep` or `embed_index search` before giving up.
 
 ### Step 5. Fix the picks you disagree with
@@ -270,7 +305,7 @@ Cut the ranges into separate files if you want them (optional):
 python -m clipmaker.clip_extractor <project>
 ```
 
-Output: `clips/` and `_cut_list.md`. A fragment without a range is listed as
+Output: `clips/` with `clips/_cut_list.md`. A fragment without a range is listed as
 `NO RANGE` — nothing is cut by guesswork.
 
 ### Step 10. Layout and Vegas
@@ -318,7 +353,7 @@ clips follow the mp3 wherever it sits on the timeline.
 |---|---|
 | `stills grab / sheet / images / fetch` | A frame at an exact second from a local or remote video, letterbox removed; contact sheets to choose from |
 | `grid NAME --from S --to E --out grid.jpg` | A labelled frame grid of one capture, found by part of its name, to check a range |
-| `image_search fandom|commons <query>` | Still images from game wikis (publisher artwork — editorial use) and Wikimedia Commons (real licence carried through) |
+| `image_search fandom <query>`, `image_search commons <query>` | Still images from game wikis (publisher artwork — editorial use) and Wikimedia Commons (real licence carried through) |
 | `video_transcriber <video>` | Transcript of a source video plus a structured, topic-segmented version (Ollama) |
 | `vegas_export <video>_structured.md` | Sections with timestamps from that structured transcript, for a one-source B-roll edit (keynotes, presentations) |
 | `production_plan <project> [game]` | Shot type and duration per fragment, coverage from your catalog, YouTube and stock, and a shooting list for the gaps |
@@ -338,7 +373,7 @@ clips follow the mp3 wherever it sits on the timeline.
 | `timings_v1.json` | `align` | `build_storyboard` |
 | `timings.json` | `build_storyboard` | `contact_sheet`, `clip_extractor`, `layout` |
 | `contact_sheet/contact_sheet.html` | `contact_sheet` | you |
-| `clips/`, `_cut_list.md` | `clip_extractor` | Vegas, you |
+| `clips/`, `clips/_cut_list.md` | `clip_extractor` | Vegas, you |
 | `vegas.json` | you; `vegas_takes` | `layout` |
 | `layout.txt`, `layout_review.md` | `layout` | `import_layout.cs`, you |
 

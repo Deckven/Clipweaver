@@ -118,7 +118,7 @@ EMBED_MIN_CHARS = 12  # skip near-empty documents
 # is accurate but says nothing about *when*. Weight hits accordingly.
 EMBED_LEVEL_WEIGHTS = {"scene": 1.0, "window": 0.92, "video": 0.85}
 # Rejection is by z-score, not raw cosine. E5 similarities are compressed into
-# a narrow band — measured on this catalog, a real match scores ~0.82 and the
+# a narrow band — measured on the author's catalog, a real match scores ~0.82 and the
 # control query "рецепт борща со сметаной" still scores 0.766, so any absolute
 # threshold either passes nonsense or rejects real hits. The z-score of a hit
 # against the same query's own score distribution separates them: worst real
@@ -141,7 +141,7 @@ SHOT_QUERY_CACHE = ROOT_DIR / "_cache" / "shot_queries.json"
 # subfolder to a catalog subfolder name.
 SAMPLE_GAMES = {
     "assassins_creed_4": {
-        "video_dirs": [RAW_FOOTAGE_DIR / "Assassin's Creed IV Black Flag"],
+        "video_dirs": [RAW_FOOTAGE_DIR / "Assassin's Creed IV Black Flag Resynced"],
         "catalog_subdir": "assassins_creed_4_videos",
         "display_name": "Assassin's Creed IV: Black Flag",
     },
@@ -150,8 +150,8 @@ SAMPLE_DEFAULT_GAME = "assassins_creed_4"
 
 
 def _load_games(local=None) -> tuple[dict, str]:
-    """GAMES and DEFAULT_GAME: the author's clipmaker/games_local.py if it exists
-    (not part of the public repository), else the sample game."""
+    """GAMES and DEFAULT_GAME: your clipmaker/games_local.py if it exists (optional,
+    gitignored; see GUIDE.md section 3), else the sample game."""
     if local is None:
         import importlib.util
         if importlib.util.find_spec("clipmaker.games_local") is None:

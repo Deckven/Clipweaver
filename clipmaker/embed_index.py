@@ -23,7 +23,7 @@ vector database here on purpose — a server-backed store would add a heavy
 dependency and buy nothing.
 
 CLI:
-    python -m clipmaker.embed_index build [--game eve_online] [--force]
+    python -m clipmaker.embed_index build [--game assassins_creed_4] [--force]
     python -m clipmaker.embed_index search "query" [--game G] [-k 8] [--level scene]
     python -m clipmaker.embed_index stats
 """
@@ -589,7 +589,7 @@ def search(
     # The reference distribution is ALWAYS the whole catalog, never the filtered
     # subset. The z-score works because it measures a hit against a topically
     # diverse background; a single game is on-topic end to end, so its mean sits
-    # far higher and nothing clears the bar. Measured on this catalog: the same
+    # far higher and nothing clears the bar. Measured on the author's catalog: the same
     # scene at cos=0.811 scored z=3.78 catalog-wide but z=2.44 under
     # --game assassins_creed_4, while the nonsense control "рецепт борща со
     # сметаной" inverted the other way — rejected at 2.72 catalog-wide, accepted

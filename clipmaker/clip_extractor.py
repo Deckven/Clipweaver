@@ -187,7 +187,9 @@ def main(project: str) -> None:
 
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 2:
-        raise SystemExit("Usage: python -m clipmaker.clip_extractor <project-name>")
-    main(sys.argv[1])
+    import argparse
+
+    ap = argparse.ArgumentParser(
+        description="Cut the ranges in a project's timings.json into clips/ (+ _cut_list.md)")
+    ap.add_argument("project", help="project folder under projects/")
+    main(ap.parse_args().project)

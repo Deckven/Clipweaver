@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 .env
+.env.*
+!.env.example
 .pytest_cache/
 
 # Claude Code: only the skills are shared
@@ -13,10 +15,20 @@ clipmaker/games_local.py
 
 # Your footage and everything derived from it stays local
 footage/
+/catalog/
+/projects/
 *.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
 *.mp3
+*.m4a
 *.wav
+*.flac
 *.sfk
+*.veg
+*.vf
 _vlm_frames/
 _cache/
 frames/

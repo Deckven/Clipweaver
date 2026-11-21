@@ -81,7 +81,7 @@ Produces: raw transcript of the narrator's audio — what TOPICS the narrator co
 6. Verify: clip duration ≥ narration fragment duration
 7. Verify: no overlapping clip ranges between fragments
 
-**Output:** `timings.json` or hardcoded values in C# script
+**Output:** a list of placements `{start_sec, end_sec, path, clip_start, label}` in the project folder (e.g. `vegas_events.json`)
 
 ### RULES FOR STEP 6:
 
@@ -101,20 +101,17 @@ ONE automated pass, then user verifies in Vegas.
   → Never rebuild all timings from scratch — fix only the reported fragments.
 ```
 
-### Step 7: Vegas Script
+### Step 7: Vegas Layout
 
-Generate a C# script for Vegas Pro that:
-1. Removes existing B-Roll tracks (prevent stacking)
-2. Removes old markers/regions from previous runs
-3. Imports source video from media pool
-4. Creates a new video track ("B-Roll v2")
-5. Places clips at `AUDIO_OFFSET_SEC + fragment.start_sec`
-6. Sets `take.Offset` to `clip_start` for each fragment
-7. Adds fade in/out (0.5s default)
-8. Creates markers and regions
-9. Shows debug MessageBox with all clip offsets
+```bash
+python -m clipmaker.layout --project <project> --events vegas_events.json
+```
 
-**Template:** Follow existing pattern in `vegas_scripts/import_*.cs`
+Validates the placements (overlaps, missing media, gaps), quantizes them to whole
+frames and writes `layout.txt` + `layout_review.md`. Then in Vegas Pro:
+Tools → Scripting → Run Script → `vegas_scripts/import_layout.cs`, pick the
+`layout.txt`. The one generic loader replaces any track of the same name, so
+re-running never stacks tracks; all times are relative to the narration start.
 
 ## Checklist Before Delivering Timings
 
@@ -122,8 +119,7 @@ Generate a C# script for Vegas Pro that:
 - [ ] Every fragment's clip range points to a VLM scene with matching visual content
 - [ ] No two fragments share overlapping clip ranges
 - [ ] Every clip range duration ≥ narration fragment duration
-- [ ] Vegas script includes cleanup of old tracks/markers
-- [ ] Vegas script includes debug MessageBox
+- [ ] `layout_review.md` read before running the loader
 
 ## Known Issues
 
@@ -137,11 +133,6 @@ Generate a C# script for Vegas Pro that:
 - Presenters often show gameplay/slides while talking about unrelated topics
 - Structured transcript timestamps are speech-based, not visual-based
 - The ONLY reliable source of visual content is VLM scene analysis
-
-### Vegas Script Caching
-- Vegas may cache compiled scripts between runs
-- Use hardcoded timings in C# (not external JSON) to avoid read-path issues
-- Always include debug MessageBox to verify the correct script is running
 
 ## Example: Successful Pipeline (Expansion Unlocked)
 

@@ -194,7 +194,7 @@ def render_report(gold: dict, results: dict) -> str:
 def _cmd_sheet(args) -> None:
     path = Path(args.sheet)
     if path.exists() and not args.force:
-        raise SystemExit(f"{path} exists — it may hold the owner's marks. "
+        raise SystemExit(f"{path} exists — it may hold the reviewer's marks. "
                          "Run apply-review first, then sheet --force.")
     gold = _require_gold(args.gold)
     results = json.loads(Path(args.results).read_text(encoding="utf-8")) \
@@ -229,7 +229,7 @@ def main() -> None:
     r.add_argument("--results", default=str(rev.RESULTS_PATH))
     r.add_argument("--report", default=str(rev.REPORT_PATH))
 
-    s = sub.add_parser("sheet", help="write the owner's review sheet")
+    s = sub.add_parser("sheet", help="write the review sheet for confirming pairs")
     s.add_argument("--sheet", default=str(rev.SHEET_PATH))
     s.add_argument("--results", default=str(rev.RESULTS_PATH))
     s.add_argument("--force", action="store_true")

@@ -571,9 +571,20 @@ def save_report(report_text: str, project: str, moments: dict | None = None) -> 
 
 
 if __name__ == "__main__":
+    import argparse
     import sys
 
-    if len(sys.argv) < 2:
+    ap = argparse.ArgumentParser(
+        description="Storyboard: search the catalog and YouTube for every narration fragment "
+                    "of projects/<project>/text.md -> storyboard.md + moments.json")
+    ap.add_argument("project", nargs="?", help="project folder under projects/ (omit to list projects)")
+    ap.add_argument("game", nargs="?", help="game key from GAMES, several as \"a,b\" "
+                    "(default: detected from the project path)")
+    ap.add_argument("--images", type=int, nargs="?", const=3, default=0, metavar="N",
+                    help="also N still images per source (Fandom wiki, Wikimedia Commons); default N=3")
+    args = ap.parse_args()
+
+    if not args.project:
         projects = list_projects()
         if projects:
             print("Available projects:")
@@ -583,17 +594,9 @@ if __name__ == "__main__":
             print(f"No projects in {config.PROJECTS_DIR}")
         sys.exit(0)
 
-    argv = sys.argv[1:]
-    images = 0
-    for flag in list(argv):
-        if flag.startswith("--images"):
-            # --images or --images=N
-            images = int(flag.split("=", 1)[1]) if "=" in flag else 3
-            argv.remove(flag)
-
-    project = argv[0]
-    # Several catalogs in one episode: --game "assassins_creed_4,assassins_creed"
-    game = argv[1] if len(argv) > 1 else _detect_game(project)
+    images = args.images
+    project = args.project
+    game = args.game or _detect_game(project)
     text = read_project_text(project)
     print(f"Processing: {project} ({len(text.split())} words)")
     if game:

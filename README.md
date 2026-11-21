@@ -5,8 +5,8 @@ footage with a local vision-language model, finds the moments your narration
 needs, and hands you a storyboard and a timeline layout. The final edit stays
 in your hands.
 
-**New here?** The [user guide](GUIDE.md) explains every module and walks the
-full path from your captures and a narration to a Vegas timeline, step by step.
+**New here?** The [user guide](GUIDE.md) explains each step and walks the full
+path from your captures and a narration to a Vegas timeline.
 
 ## What it does — and what it does not
 
@@ -17,7 +17,7 @@ full path from your captures and a narration to a Vegas timeline, step by step.
   every few seconds (EasyOCR), and scene descriptions with start and end times.
 - **Search.** Finds *moments*, not files: semantic search over the catalog
   (multilingual E5, so a Russian query finds English descriptions) plus regex
-  over the on-screen text for exact names, tickers and numbers.
+  over the on-screen text for exact item and place names and numbers.
 - **Storyboard.** Splits the narration into fragments, turns each into
   descriptions of the picture (local LLM via Ollama), and picks a clip and a
   range for every fragment. A contact sheet shows the picks before anything
@@ -31,24 +31,30 @@ full path from your captures and a narration to a Vegas timeline, step by step.
 - Edit the video. Pacing, cuts, music and the last 20% of picks are yours.
 - Work with footage you do not have. It searches your captures; it does not
   download or generate b-roll.
-- Run without a GPU for indexing. Search, storyboard and layout run on CPU.
+- Index footage or transcribe without a CUDA GPU. Search, storyboard,
+  alignment and layout run on CPU.
+- Place clips outside Vegas Pro. The timeline loader is a Vegas Pro 22 script
+  (Windows); everything before it is plain files you can use elsewhere.
 
 ## How well it works
 
 Measured on the author's catalog (over 1 000 indexed videos in ten game catalogs)
-against clips actually placed in finished videos. A hit means the right moment
-(±5 s) is in the top 10 results of at least one search layer.
+against clips actually placed in three finished videos. A hit means the right
+moment (±5 s) is in the top 10 results.
 
-| Set | Queries | Recall@10, moment |
-|---|---|---|
-| Storyboard with picture queries written before searching | 40 | 70% |
-| All three finished videos, incl. labels written after the edit | 266 | 35% |
+| Queries | n | Semantic search alone | Any of three layers (semantic, OCR, scenes) |
+|---|---|---|---|
+| Picture queries written before searching (one video) | 40 | 45% | 70% |
+| All three videos, incl. labels written after the edit | 266 | 23% | 35% |
 
-Only 44 of the 346 query–clip pairs are confirmed by hand so far; treat the
-numbers as a floor with wide error bars.
+The 40 are part of the 266. The gold set holds 346 queries; 44 of them are
+confirmed by hand so far, so treat the numbers as a floor with wide error bars.
+The catalog and the gold set are private, so these numbers cannot be reproduced
+from this repository; `clipmaker.retrieval_eval` runs the same measurement on
+your own catalog.
 
-Caption accuracy on a hand-labelled sample, indexing time per hour of footage
-and peak VRAM per stage are being measured; they will be added here.
+Not measured yet: caption accuracy on a hand-labelled sample, indexing time per
+hour of footage, peak VRAM per stage.
 
 Hardware the numbers come from: one RTX 5070 Ti (16 GB). The 7B model in NF4
 takes about 5 GB; a call over 10 frames peaks at 9.8 GB, 20 frames at 14.1 GB,
@@ -60,13 +66,18 @@ so the default batch is 12 frames.
 Assassin's Creed IV captures — no video, just what the indexer wrote.
 
 ```bash
-pip install -e .
+# CPU-only torch is enough here; then the package with semantic search and YouTube
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -e ".[search,youtube]"
+```
+
+```bash
 export CLIPMAKER_CATALOG_DIR=examples/sample/catalog   # PowerShell: $env:CLIPMAKER_CATALOG_DIR="examples/sample/catalog"
 python -m clipmaker.ocrgrep "harbou?rmaster" --game assassins_creed_4
 ```
 
-Semantic search over the same four clips is in
-[examples/sample/README.md](examples/sample/README.md).
+Semantic search and a storyboard over the same four clips: the ten-minute tour
+in [GUIDE.md](GUIDE.md#4-ten-minute-tour-on-the-sample-no-gpu).
 
 ## Install
 
@@ -88,9 +99,10 @@ Extras: `vlm` (indexing), `ocr`, `search` (E5 embeddings), `transcribe`
 ## Configure
 
 Machine-specific settings live in `.env` (see `.env.example`): where your raw
-captures and editor projects are, and optional stock-footage API keys. Games
-and their capture folders are listed in `GAMES` in `clipmaker/config.py` —
-add yours there.
+captures and editor projects are, and optional stock-footage API keys. Your
+games and their capture folders go into `clipmaker/games_local.py` (gitignored);
+without it, `GAMES` holds only the sample game. See
+[GUIDE.md](GUIDE.md#3-folders-and-files).
 
 ## Pipeline
 
@@ -104,7 +116,7 @@ voice-over ──► transcribe ──► align ──► build_storyboard ─�
                                    layout ──► layout.txt ──► vegas_scripts/import_layout.cs
 ```
 
-Each step is a module: `python -m clipmaker.<module> --help`. Step by step, with
+Each step is a module with its own `python -m clipmaker.<module> --help`. Step by step, with
 the files each step reads and writes: [GUIDE.md](GUIDE.md).
 
 ## Claude Code skills

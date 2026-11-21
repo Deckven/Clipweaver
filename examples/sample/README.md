@@ -3,7 +3,9 @@
 Four catalog entries from the author's own Assassin's Creed IV Black Flag
 (Resynced) gameplay captures, exactly as the VLM indexer wrote them: title,
 summary, tags, a caption with the on-screen text every 5 seconds, and scene
-descriptions with start and end times. No video is included — `source_path`
+descriptions with start and end times. In-game dialogue and item flavour text
+were removed from the on-screen text; menus, objectives and names are as indexed.
+No video is included — `source_path`
 points into `footage/raw/`, where the capture would sit on your machine.
 
 | Clip | Length | On screen |
@@ -18,11 +20,12 @@ per clip. `shots.json` holds, for each paragraph, a description of the picture
 and the clip that should come back first. The two exist side by side because a
 narration paragraph says what the video is *about*, while the catalog says what
 is *on screen*: embedded directly, paragraph 1 (a sea battle) comes back as the
-upgrade menu; described as a picture, all four land on the right clip (E5 on
-CPU, 2026-11-14). In the full pipeline a local LLM writes those picture
+upgrade menu; described as a picture, all four land on the right clip. In the full pipeline a local LLM writes those picture
 descriptions (`clipmaker.shot_query`).
 
-Try it from the repository root — no GPU and no video needed:
+Try it from the repository root — no GPU and no video needed. Install with
+`pip install -e ".[search]"` after a CPU torch (see the
+[guide](../../GUIDE.md#4-ten-minute-tour-on-the-sample-no-gpu)), then:
 
 ```bash
 export CLIPMAKER_CATALOG_DIR=examples/sample/catalog   # PowerShell: $env:CLIPMAKER_CATALOG_DIR="examples/sample/catalog"

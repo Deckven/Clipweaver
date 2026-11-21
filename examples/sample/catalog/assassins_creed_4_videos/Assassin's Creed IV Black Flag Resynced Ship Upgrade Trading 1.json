@@ -1,5 +1,5 @@
 {
-  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Ship Upgrade Trading 1.mp4",
+  "source_path": "footage/raw/Assassin's Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Ship Upgrade Trading 1.mp4",
   "original_name": "Assassin's Creed IV Black Flag Resynced Ship Upgrade Trading 1.mp4",
   "duration_sec": 220,
   "frame_interval_sec": 5,
@@ -36,21 +36,15 @@
     "WVeapons",
     "Armored Hull V",
     "Strengthens the Jackdaw's resistance to",
-    "damage,",
     "FULLY UPGRADED",
     "Sell",
     "Wine",
     "Ocean Wildlife Products",
     "Wines like Madeira",
     "Sack are status",
-    "symbols tor the wealthy: That makes them",
-    "unprofitable drinking: but good",
-    "trade.",
     "Used for Treasure Dealer transactions and",
     "Kenway' $ Fleet missions Wine can be",
-    "sold for",
     "good",
-    "in all stores",
     "VALUE",
     "Cargo",
     "Trade Goods",
@@ -60,21 +54,17 @@
     "Tobacco",
     "Though less common as most planters",
     "Javor sugarcane",
-    "tobacco remains",
-    "valuable crop thanks to strong local",
     "demand:",
     "Kenway' $ Fleet missions Tobacco can be",
     "Rcales",
     "Kenway' s Flect missions. Tobacco can be",
     "Round and Heated Shot IV",
     "Increases Round Shot and Heated Shot",
-    "damage output for broadside cannons.",
     "Next Level",
     "Round Shot Strength Ultimate",
     "Plan",
     "Mortar II",
     "Increases long-range damage dealt by",
-    "auxiliary weapon",
     "See Shop",
     "Exit",
     "3232m",
@@ -99,8 +89,6 @@
     "Projectiles Fired",
     "250m",
     "Fires",
-    "projectile that slows down targets",
-    "aimed attheir sails.",
     "Infinite ammo",
     "Fire",
     "Change Mode",
@@ -114,11 +102,9 @@
     "San Juan",
     "Mark all as seen",
     "JACKDAW",
-    "damage output for broadside cannons;",
     "Royal Fortune Figurehead",
     "Rare Figurehead",
     "Figurehead",
-    "figurehead which used to belong to",
     "Black Bart'$ ship; the Royal Fortune",
     "Back",
     "The Jackdaw's Hull",
@@ -130,8 +116,6 @@
     "Reinforced black hull with intricate gold",
     "The Black Ship's Sails",
     "Rare Sails",
-    "set of sails that once",
-    "propelled the",
     "Sails",
     "Black Ship:",
     "Change appearance in Cabin or via",
@@ -142,7 +126,6 @@
     "A set of gray canvas sails",
     "Dark Animus Corsair Sails",
     "Raise high the colors;",
-    "set of sails that once propelled the",
     "986m1"
   ],
   "title": "Ship Upgrade and Trading",
@@ -207,7 +190,7 @@
     {
       "start": "00:20",
       "end": "00:25",
-      "caption": "HARBOURMASTER; Armored Hull V; Upgrades; Appearance; Strengthens the Jackdaw's resistance to; damage,; WVeapons; Armor; FULLY UPGRADED; Ship; Storage; Harpooning; Close",
+      "caption": "HARBOURMASTER; Armored Hull V; Upgrades; Appearance; Strengthens the Jackdaw's resistance to; WVeapons; Armor; FULLY UPGRADED; Ship; Storage; Harpooning; Close",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -231,7 +214,7 @@
     {
       "start": "00:50",
       "end": "01:05",
-      "caption": "HARBOURMASTER; Sell; Wine; Ocean Wildlife Products; Wines like Madeira; Sack are status; symbols tor the wealthy: That makes them; unprofitable drinking: but good; trade.; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Wine can be; sold for; good; in all stores; VALUE; Cargo; Trade Goods; Reales; Sell; Sell all; Close; Sell all Trade Goods; profit",
+      "caption": "HARBOURMASTER; Sell; Wine; Ocean Wildlife Products; Wines like Madeira; Sack are status; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Wine can be; good; VALUE; Cargo; Trade Goods; Reales; Sell; Sell all; Close; Sell all Trade Goods; profit",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -239,7 +222,7 @@
     {
       "start": "01:05",
       "end": "01:10",
-      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; tobacco remains; valuable crop thanks to strong local; demand:; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Tobacco can be; good; in all stores; Cargo; Trade Goods; VALUE; Sell; Sell all; Close; Sell all Trade Goods; Rcales",
+      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; demand:; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Tobacco can be; good; Cargo; Trade Goods; VALUE; Sell; Sell all; Close; Sell all Trade Goods; Rcales",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -247,7 +230,7 @@
     {
       "start": "01:10",
       "end": "01:15",
-      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; tobacco remains; valuable crop thanks to strong local; demand:; Used for Treasure Dealer transactions and; Kenway' s Flect missions. Tobacco can be; good; in all stores; Cargo; Trade Goods; VALUE; Reales; Sell; Sell all; Close; Sell all Trade Goods",
+      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; demand:; Used for Treasure Dealer transactions and; Kenway' s Flect missions. Tobacco can be; good; Cargo; Trade Goods; VALUE; Reales; Sell; Sell all; Close; Sell all Trade Goods",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -255,7 +238,7 @@
     {
       "start": "01:15",
       "end": "01:20",
-      "caption": "Round and Heated Shot IV; Upgrades; Appearance; Increases Round Shot and Heated Shot; damage output for broadside cannons.; Weapons; Next Level; Damage; COST; Ship; Reales; Round Shot Strength Ultimate; Plan; Upgrade; Storage; Harpooning; Close",
+      "caption": "Round and Heated Shot IV; Upgrades; Appearance; Increases Round Shot and Heated Shot; Weapons; Next Level; Damage; COST; Ship; Reales; Round Shot Strength Ultimate; Plan; Upgrade; Storage; Harpooning; Close",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -263,7 +246,7 @@
     {
       "start": "01:20",
       "end": "01:25",
-      "caption": "HARBOURMASTER; Mortar II; Upgrades; Appearance; Increases long-range damage dealt by; auxiliary weapon; WVeapons; Level; Damage; COST; Ship; Reales; Metal; Upgrade; Storage; Harpooning; Close",
+      "caption": "HARBOURMASTER; Mortar II; Upgrades; Appearance; Increases long-range damage dealt by; WVeapons; Level; Damage; COST; Ship; Reales; Metal; Upgrade; Storage; Harpooning; Close",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -335,7 +318,7 @@
     {
       "start": "02:05",
       "end": "02:10",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Front Weapon; Chain Shot; Arsenal; Upgrades; Appearance; Darage; Reload Time; Projectiles Fired; 250m; Fires; projectile that slows down targets; aimed attheir sails.; Infinite ammo; Fire; Change Mode; Blindfire; Officers; Close; Tutorials; Rotate; Range",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Front Weapon; Chain Shot; Arsenal; Upgrades; Appearance; Darage; Reload Time; Projectiles Fired; 250m; Fires; Infinite ammo; Fire; Change Mode; Blindfire; Officers; Close; Tutorials; Rotate; Range",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -359,7 +342,7 @@
     {
       "start": "02:20",
       "end": "02:30",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Armored Hull V; Arsenal; Upgrades; Appearance; Strengthens the Jackdaw's resistance to; damage,; Weapons; Armor; FULLY UPGRADED; Ship; Storage; Harpooning; Close; Tutorials",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Armored Hull V; Arsenal; Upgrades; Appearance; Strengthens the Jackdaw's resistance to; Weapons; Armor; FULLY UPGRADED; Ship; Storage; Harpooning; Close; Tutorials",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -367,7 +350,7 @@
     {
       "start": "02:30",
       "end": "02:35",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDAW; Round and Heated Shot IV; Arsenal; Upgrades; Appearance; Increases Round Shot and Heated Shot; damage output for broadside cannons;; Weapons; Level; Damage; COST; Ship; Reales; Round Shot Strength Ultimate; Plan; Storage; Harpooning; Close; Tutorials",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDAW; Round and Heated Shot IV; Arsenal; Upgrades; Appearance; Increases Round Shot and Heated Shot; Weapons; Level; Damage; COST; Ship; Reales; Round Shot Strength Ultimate; Plan; Storage; Harpooning; Close; Tutorials",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -375,7 +358,7 @@
     {
       "start": "02:35",
       "end": "02:45",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Royal Fortune Figurehead; Rare Figurehead; Arsenal; Upgrades; Appearance; Figurehead; figurehead which used to belong to; Black Bart'$ ship; the Royal Fortune; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Royal Fortune Figurehead; Rare Figurehead; Arsenal; Upgrades; Appearance; Figurehead; Black Bart'$ ship; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -399,7 +382,7 @@
     {
       "start": "02:55",
       "end": "03:00",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; The Black Ship's Sails; Rare Sails; Arsenal; Upgrades; Appearance; set of sails that once; propelled the; Sails; Figurehead; Black Ship:; Change appearance in Cabin or via; Harbourmaster; View; Hull; Wheel; Crew; Close; Tutorials; Rotate",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; The Black Ship's Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; Figurehead; Black Ship:; Change appearance in Cabin or via; Harbourmaster; View; Hull; Wheel; Crew; Close; Tutorials; Rotate",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -431,7 +414,7 @@
     {
       "start": "03:15",
       "end": "03:20",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDAW; The Black Ship's Sails; Rare Sails; Arsenal; Upgrades; Appearance; set of sails that once propelled the; Sails; Figurehead; Black Ship:; Change appearance in Cabin or via; Harbourmaster; View; Hull; Wheel; Crew; Close; Tutorials; Rotate",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDAW; The Black Ship's Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; Figurehead; Black Ship:; Change appearance in Cabin or via; Harbourmaster; View; Hull; Wheel; Crew; Close; Tutorials; Rotate",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -538,8 +521,8 @@
     }
   ],
   "path_hints": {
-    "location": "Assassin’s Creed IV Black Flag Resynced",
-    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "location": "Assassin's Creed IV Black Flag Resynced",
+    "location_folder": "Assassin's Creed IV Black Flag Resynced",
     "entities": []
   },
   "suggested_filename": "Assassin's Creed IV Black Flag Resynced Ship Upgrade Trading.mp4"

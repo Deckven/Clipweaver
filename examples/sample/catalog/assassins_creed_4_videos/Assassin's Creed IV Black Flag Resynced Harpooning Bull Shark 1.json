@@ -1,5 +1,5 @@
 {
-  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4",
+  "source_path": "footage/raw/Assassin's Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4",
   "original_name": "Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4",
   "duration_sec": 179,
   "frame_interval_sec": 5,
@@ -17,7 +17,6 @@
     "Store",
     "Crafting",
     "Berserk Dart",
-    "Increase Berserk Dart duration.",
     "Duration",
     "Next Level",
     "cOST",
@@ -56,7 +55,6 @@
     "Bull Shark",
     "ooning",
     "Harpc",
-    "A Great Catch, Captain!",
     "Release Wheel"
   ],
   "title": "Harpooning a Bull Shark",
@@ -86,7 +84,7 @@
     {
       "start": "00:00",
       "end": "00:05",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; Crafting; Berserk Dart; Increase Berserk Dart duration.; Duration; Next Level; cOST; Humpback Whale Skin; Currently Restricted; Craft; Back; Tutorials",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; Crafting; Berserk Dart; Duration; Next Level; cOST; Humpback Whale Skin; Currently Restricted; Craft; Back; Tutorials",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -246,7 +244,7 @@
     {
       "start": "02:50",
       "end": "02:55",
-      "caption": "Shanty Wheel; A Great Catch, Captain!; Pathfinder; Spyglass; Release Wheel",
+      "caption": "Shanty Wheel; Pathfinder; Spyglass; Release Wheel",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -347,8 +345,8 @@
     }
   ],
   "path_hints": {
-    "location": "Assassin’s Creed IV Black Flag Resynced",
-    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "location": "Assassin's Creed IV Black Flag Resynced",
+    "location_folder": "Assassin's Creed IV Black Flag Resynced",
     "entities": []
   },
   "suggested_filename": "Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark.mp4"

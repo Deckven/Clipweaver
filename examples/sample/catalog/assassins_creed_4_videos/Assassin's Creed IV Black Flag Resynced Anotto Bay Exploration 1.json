@@ -1,5 +1,5 @@
 {
-  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Anotto Bay Exploration 1.mp4",
+  "source_path": "footage/raw/Assassin's Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Anotto Bay Exploration 1.mp4",
   "original_name": "Assassin's Creed IV Black Flag Resynced Anotto Bay Exploration 1.mp4",
   "duration_sec": 899,
   "frame_interval_sec": 5,
@@ -36,17 +36,13 @@
     "Claim",
     "nowin",
     "Open Animus",
-    "You lied. We're trapped and",
     "there'",
-    "no Treasure",
-    "Projects.",
     "Loot",
     "Anomaly Stabilized",
     "Entity Procurement",
     "Sweep enemies",
     "(Worthless",
     "Now; how",
-    "will we get out?)",
     "Dog:",
     "13m",
     "Rcales",
@@ -447,7 +443,7 @@
     {
       "start": "12:45",
       "end": "12:50",
-      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Open Animus; You lied. We're trapped and; there'; no Treasure",
+      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Open Animus; there'",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -455,7 +451,7 @@
     {
       "start": "12:50",
       "end": "12:55",
-      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Projects.; Open Animus; Loot",
+      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Open Animus; Loot",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -463,7 +459,7 @@
     {
       "start": "12:55",
       "end": "13:00",
-      "caption": "Anotto Bay; Anomaly Stabilized; Entity Procurement; Sweep enemies; (Worthless; Now; how; will we get out?); Dog:",
+      "caption": "Anotto Bay; Anomaly Stabilized; Entity Procurement; Sweep enemies; (Worthless; Now; how; Dog:",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -872,8 +868,8 @@
     }
   ],
   "path_hints": {
-    "location": "Assassin’s Creed IV Black Flag Resynced",
-    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "location": "Assassin's Creed IV Black Flag Resynced",
+    "location_folder": "Assassin's Creed IV Black Flag Resynced",
     "entities": []
   },
   "suggested_filename": "Assassin's Creed IV Black Flag Resynced Anotto Bay Exploration.mp4"

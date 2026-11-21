@@ -18,7 +18,7 @@ Analyze narration text → classify shots → search footage → gap analysis.
 python -m clipmaker.production_plan <project-name> [game]
 
 # Example
-python -m clipmaker.production_plan diablo4-lord-of-hatred diablo4
+python -m clipmaker.production_plan my-episode assassins_creed_4
 
 # List available projects
 python -m clipmaker.production_plan

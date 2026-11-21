@@ -12,7 +12,7 @@ folder, so <project>/overlays inherits it):
     {
       "fps": 59.94,                        Vegas project frame rate; layout.py
                                            quantizes at it (no --fps by hand)
-      "audio": "EoE2-16-pl-o2o2x v2.mp3",  narration the timings were aligned to
+      "audio": "narration v2.mp3",         narration the timings were aligned to
       "takes": [                           raw takes inside that narration
         {"file": "Recording 1.mp3", "from_sec": 0.0, "to_sec": 22.0, "lag_sec": 0.027}
       ],

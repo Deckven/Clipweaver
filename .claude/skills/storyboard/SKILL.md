@@ -15,19 +15,18 @@ Text → fragments → footage search → audio alignment → clip extraction.
 
 `report.py` generates queries from the narration. That finds explainers and
 retrospectives; it does **not** find recordings of the events themselves, because
-fights are titled with system codes and alliance tickers, not with narration
+events are titled with place names, codes and group names, not with narration
 phrases. Its empty result is not evidence that the footage is missing.
 
 So after `report.py`, always run a second pass by hand:
 
-1. Pull the proper nouns out of the narration — system codes, alliance names,
-   tickers, dates.
+1. Pull the proper nouns out of the narration — places, names, codes, dates.
 2. Search each one: `yt-dlp --skip-download --flat-playlist --print
    "%(duration)s|%(title)s|%(webpage_url)s" "ytsearch5:<term>"`.
 3. Confirm each hit with `--print "%(upload_date)s|%(duration)s|%(width)sx%(height)s"`.
    The same regions get fought over for decades — an upload from 2009 or 2017 looks
    identical in a title.
-4. If the topic has a research dump under `Newsroom/docs/research/`, read it first:
+4. If you keep research notes for the topic, read them first:
    community channels post the links directly, with dates.
 
 Only after that pass may the storyboard say a fragment has no footage.
@@ -54,7 +53,7 @@ python -m clipmaker.video_transcriber narration.mp3 --stage raw --out-dir projec
 python -m clipmaker.report <project-name> [game]
 
 # Example
-python -m clipmaker.report diablo4-lord-of-hatred diablo4
+python -m clipmaker.report my-episode assassins_creed_4
 
 # List projects
 python -m clipmaker.report
@@ -107,8 +106,8 @@ Fragments absent from curation.json use the top moment from `moments.json`.
 python -m clipmaker.align <project-name>
 ```
 
-The project is a positional argument (e.g. `eve_online/drafts/<slug>`).
-`--project <project-name>` works too once branch `claude/day-2026-10-27-clipmaker-cli`
+The project is a positional argument (e.g. `my_game/drafts/<slug>`);
+`--project <project-name>` works too.
 is merged; before that it fails with "No storyboard.md".
 
 **What it does:**

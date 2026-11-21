@@ -1,7 +1,7 @@
 """Where each raw take sits inside the merged narration mp3.
 
 The narration is recorded as raw takes (Recording N.mp3, Changes N.mp3, ...)
-that the author cuts and arranges on the Vegas timeline, then renders into
+that the editor cuts and arranges on the Vegas timeline, then renders into
 one mix; the timings are aligned to that mix. When the timeline holds the raw
 takes instead of the mix, the Vegas loader anchors the B-roll on the takes —
 it needs each take piece's lag, measured here.

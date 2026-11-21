@@ -5,7 +5,7 @@ finds where each fragment starts/ends in the audio, and writes
 a timecoded fragment map for clip_extractor and the Vegas script.
 
 Usage:
-    python -m clipmaker.align <project>            # e.g. eve_online/drafts/<slug>
+    python -m clipmaker.align <project>            # e.g. my_game/drafts/<slug>
     python -m clipmaker.align --project <project>  # same thing
 """
 from __future__ import annotations
@@ -243,7 +243,7 @@ def parse_args(argv: list[str] | None = None) -> str:
         description="Align storyboard fragments to the narration transcript "
                     "-> timings_v1.json")
     ap.add_argument("project_pos", nargs="?", metavar="project",
-                    help="project folder under projects/, e.g. eve_online/drafts/<slug>")
+                    help="project folder under projects/, e.g. my_game/drafts/<slug>")
     ap.add_argument("--project", default=None, help="same as the positional argument")
     args = ap.parse_args(argv)
     if args.project and args.project_pos and args.project != args.project_pos:

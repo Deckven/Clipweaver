@@ -80,8 +80,11 @@ def search_stock(query: str, max_results: int = 5) -> list[dict]:
 
 
 if __name__ == "__main__":
-    import sys
-    q = " ".join(sys.argv[1:]) or "dark fantasy battle"
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Search stock video on Pexels and Pixabay (API keys in .env)")
+    ap.add_argument("query", nargs="+", help="search words")
+    q = " ".join(ap.parse_args().query)
     print(f"Searching stock footage for: {q}\n")
     for r in search_stock(q):
         print(f"  [{r['source']}] {r['title']} ({r['duration_sec']}s)")

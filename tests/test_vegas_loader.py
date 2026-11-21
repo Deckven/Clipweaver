@@ -78,7 +78,7 @@ def test_csharp_parses_the_same_takes_and_events(harness, lay):
 # --- the anchor ----------------------------------------------------------------
 
 def timeline_from(takes, zero_ms: float) -> list[tuple[str, float, float, float]]:
-    """Audio events (file, start, offset, length) as the author lays the takes
+    """Audio events (file, start, offset, length) as an editor lays the takes
     out: each segment once, the longer ones cut in two, plus unrelated audio."""
     pieces = []
     for t in takes:

@@ -16,8 +16,31 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import torch
 from PIL import Image
+
+
+class _LazyTorch:
+    """torch, imported on first use: --help, dry runs and the tests that only
+    touch naming and catalog logic work without the `vlm` extra installed."""
+
+    def __getattr__(self, name):
+        import torch as _torch
+        return getattr(_torch, name)
+
+
+torch = _LazyTorch()
+
+
+def _cuda_available() -> bool:
+    return torch.cuda.is_available()
+
+
+def _empty_cuda_cache() -> None:
+    """Free cached GPU memory between chunks. Nothing to free if torch was never
+    loaded (tests with a stubbed VLM, machines without the vlm extra)."""
+    loaded = sys.modules.get("torch")
+    if loaded is not None and loaded.cuda.is_available():
+        loaded.cuda.empty_cache()
 
 from . import config
 from .game_vocab import vocab_for, render_vocab_hint, match_entities, match_region
@@ -846,7 +869,7 @@ def _run_vlm_chunked(
 
     for ci in range(0, len(frame_paths), chunk_size):
         if ci > 0:
-            torch.cuda.empty_cache()
+            _empty_cuda_cache()
         chunk_frames = frame_paths[ci:ci + chunk_size]
         chunk_idx = ci // chunk_size + 1
         chunk_start_sec = ci * interval
@@ -1121,9 +1144,9 @@ def _sanitize_dirname(name: str) -> str:
 def _catalog_subpath_for(video_path: Path, game: str) -> Path:
     """Mirror the source folder structure under the game's catalog subdir.
 
-    E.g. `<RAW_FOOTAGE_DIR>\\Eve Online\\Gallente President Election\\foo.mp4` (game root
-    is `Eve Online`) -> catalog/eve_online_videos/gallente_elections (if an
-    override is configured, else sanitized source folder name).
+    E.g. `<RAW_FOOTAGE_DIR>/My Game/Season 2 Bosses/foo.mp4` (game root is
+    `My Game`) -> catalog/my_game_videos/season_2 (if an override is
+    configured, else the sanitized source folder name).
     """
     cfg = config.GAMES.get(game, {})
     overrides: dict[str, str] = cfg.get("subdir_overrides") or {}
@@ -1378,7 +1401,7 @@ def run_batch(game: str, paths: list[Path] | None, force: bool,
         print_index_plan(index_plan(game, videos, force))
         return
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if _cuda_available() else "cpu"
     print(f"Device: {device}  |  Game: {game}  |  Videos: {len(videos)}")
 
     for i, v in enumerate(videos, 1):
