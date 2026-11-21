@@ -162,11 +162,26 @@ def _call_ollama(prompt: str, system: str, model: str) -> str | None:
     try:
         with urllib.request.urlopen(request, timeout=config.SHOT_QUERY_TIMEOUT) as resp:
             data = json.loads(resp.read())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+        _warn_once(f"Ollama at {config.OLLAMA_URL} did not answer ({exc}); searching with the "
+                   f"narration text itself, which finds far less. Start Ollama for picture queries.")
         return None
     if "error" in data:
+        _warn_once(f"Ollama model {model!r}: {data['error']}; searching with the narration text "
+                   f"itself. Pull the model with `ollama pull {model}`.")
         return None
     return (data.get("message") or {}).get("content", "")
+
+
+_warned: set[str] = set()
+
+
+def _warn_once(message: str) -> None:
+    """One line per distinct problem per run, not one per fragment."""
+    key = message.split(";")[0]
+    if key not in _warned:
+        _warned.add(key)
+        print(f"[shot_query] {message}")
 
 
 def _parse_reply(reply: str, max_queries: int) -> list[str]:
@@ -224,7 +239,9 @@ def build_shot_queries(
         max_queries=max_queries, none=_NO_VISUAL, vocab=_vocab_block(game)
     )
     reply = _call_ollama(fragment, system, model)
-    if reply is None:
+    if reply is None or not reply.strip():
+        # An empty reply is a failure, not "nothing filmable": do not cache it,
+        # or one hiccup would hide this fragment from every later storyboard.
         return [ShotQuery(text=fragment, source="fragment")]
 
     queries = _parse_reply(reply, max_queries)

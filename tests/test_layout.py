@@ -104,6 +104,21 @@ def test_precut_clip_wins_over_source_and_has_zero_offset(tmp_path):
     assert res.events[0].take_offset_ms == 0
 
 
+def test_stale_precut_of_an_earlier_pick_is_ignored_and_reported(tmp_path):
+    # Curation moved fragment 1 from "old" to "src": the old cut is still in clips/.
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    (clips / "01_old.mp4").write_bytes(b"")
+    footage = tmp_path / "footage"
+    footage.mkdir()
+    (footage / "src.mp4").write_bytes(b"")
+    res = build_layout(
+        [timing(1, 0.0, 20.0, clip_start=30, clip_end=55)],
+        FPS, clips, footage, catalog_for(), probe=lambda p: 20.0)
+    assert all(e.path.name != "01_old.mp4" for e in res.events)
+    assert any("01_old.mp4" in w and "earlier pick" in w for w in res.warnings)
+
+
 def test_short_clip_flags_a_gap(tmp_path):
     clips = tmp_path / "clips"
     clips.mkdir()

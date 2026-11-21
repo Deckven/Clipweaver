@@ -52,6 +52,15 @@ def test_precut_clip_is_sampled_from_zero(tmp_path):
     assert all(0 < t < 30.0 for t in row["times"])
 
 
+def test_precut_of_another_pick_is_not_shown(tmp_path):
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    (clips / "01_old.mp4").write_bytes(b"")
+    row = sheet_row(timing(clip_start=100.0, clip_end=130.0),
+                    clips, tmp_path / "footage", {}, frames=3)
+    assert row["media"] != clips / "01_old.mp4"
+
+
 def test_html_marks_problem_fragments():
     ok = {"fragment": 1, "start_ts": "0", "end_ts": "1", "duration": 20.0,
           "text": "ok", "transcript": "", "source_label": "moment",

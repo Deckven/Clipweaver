@@ -27,8 +27,11 @@ HARNESS = ROOT / "tests" / "vegas_harness" / "LayoutHarness.cs"
 PIN = re.compile(r'LAYOUT_FILE = @"[^"]*[\\/]projects[\\/](.*)[\\/]layout\.txt"')
 NARRATION_ZERO_MS = -27.0  # where the measured projects really had it
 
-pytestmark = pytest.mark.skipif(not (CSC.exists() and VEGAS_DLL.exists()),
-                                reason="needs csc.exe and the Vegas Pro 22 DLL")
+pytestmark = [
+    pytest.mark.skipif(not (CSC.exists() and VEGAS_DLL.exists()),
+                                    reason="needs csc.exe and the Vegas Pro 22 DLL"),
+    pytest.mark.real_data,
+]
 
 
 @pytest.fixture(scope="module")

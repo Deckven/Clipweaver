@@ -65,7 +65,7 @@ def sheet_row(t: dict, clips_dir: Path, footage_dir: Path,
         row["problem"] = "no video assigned"
         return row
 
-    precut = find_precut_clip(clips_dir, num)
+    precut = find_precut_clip(clips_dir, num, t["primary_video"])
     if precut is not None:
         clip_len = max(0.0, float(t.get("clip_end", 0)) - float(t.get("clip_start", 0)))
         span = clip_len or float(t.get("duration_sec", 0)) or 30.0

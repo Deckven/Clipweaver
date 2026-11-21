@@ -30,6 +30,7 @@ CLI:
 from __future__ import annotations
 
 import hashlib
+import os
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -382,13 +383,17 @@ def load_index() -> Index | None:
 
 
 def _save_index(index: Index) -> None:
+    """Write the three index files so a crash never leaves them out of step:
+    each goes to a temporary name first and is swapped in with os.replace,
+    the manifest last."""
     d = _index_dir()
     d.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(d / _VECTORS_FILE, vectors=index.vectors)
-    (d / _DOCS_FILE).write_text(
-        json.dumps(index.docs, ensure_ascii=False), encoding="utf-8"
-    )
-    (d / _MANIFEST_FILE).write_text(
+    tmp_vectors = d / ("tmp-" + _VECTORS_FILE)
+    np.savez_compressed(tmp_vectors, vectors=index.vectors)
+    tmp_docs = d / ("tmp-" + _DOCS_FILE)
+    tmp_docs.write_text(json.dumps(index.docs, ensure_ascii=False), encoding="utf-8")
+    tmp_manifest = d / ("tmp-" + _MANIFEST_FILE)
+    tmp_manifest.write_text(
         json.dumps({
             "model": config.EMBED_MODEL,
             "window_frames": config.EMBED_WINDOW_FRAMES,
@@ -396,6 +401,9 @@ def _save_index(index: Index) -> None:
         }, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    os.replace(tmp_vectors, d / _VECTORS_FILE)
+    os.replace(tmp_docs, d / _DOCS_FILE)
+    os.replace(tmp_manifest, d / _MANIFEST_FILE)
 
 
 def _fingerprint(path: Path) -> str:
@@ -443,8 +451,19 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
 
     Files whose content hash is unchanged keep their existing vectors; only
     new, edited and deleted catalog entries are touched.
+
+    Refuses (and leaves the index as it is) when the game is unknown, when no
+    catalog file is found — an unplugged footage drive looks exactly like an
+    empty catalog — and, unless ``force``, when the build would drop more than
+    half of the files indexed before.
     """
+    if game is not None and game not in config.GAMES:
+        raise ValueError(f"unknown game {game!r}; known: {', '.join(sorted(config.GAMES))}")
     files = _catalog_files(game)
+    if not files:
+        where = config.CATALOG_DIR / config.GAMES[game]["catalog_subdir"] if game else config.CATALOG_DIR
+        raise RuntimeError(f"no catalog files under {where} — is the folder (or its drive) "
+                           f"available? The index was left as it is.")
     previous = load_index()
     prev_manifest = dict(previous.manifest.get("files", {})) if previous else {}
     if previous and previous.manifest.get("model") != config.EMBED_MODEL:
@@ -515,6 +534,18 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
     }
     manifest.update(fingerprints)
 
+    if game is None:
+        prev_in_scope = set(prev_manifest)
+    else:
+        subdir = config.GAMES[game]["catalog_subdir"] + "/"
+        prev_in_scope = {r for r in prev_manifest if r.startswith(subdir)}
+    would_drop = prev_in_scope - scope
+    if not force and prev_in_scope and len(would_drop) > len(prev_in_scope) // 2:
+        raise RuntimeError(
+            f"this build would drop {len(would_drop)} of {len(prev_in_scope)} indexed catalog "
+            f"files — is part of the catalog missing? Re-run with --force if they are "
+            f"really gone. The index was left as it is.")
+
     index = Index(vectors=vectors, docs=docs, manifest=manifest)
     _save_index(index)
 
@@ -522,11 +553,7 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
     for doc in docs:
         by_level[doc["level"]] = by_level.get(doc["level"], 0) + 1
 
-    if game is None:
-        dropped = len(set(prev_manifest) - scope)
-    else:
-        subdir = config.GAMES[game]["catalog_subdir"] + "/"
-        dropped = len({r for r in prev_manifest if r.startswith(subdir)} - scope)
+    dropped = len(would_drop)
 
     return BuildStats(
         files_seen=len(files),
@@ -677,7 +704,8 @@ def _main() -> None:
 
     p_build = sub.add_parser("build", help="build or refresh the index")
     p_build.add_argument("--game", default=None, help="limit to one game key")
-    p_build.add_argument("--force", action="store_true", help="re-embed everything")
+    p_build.add_argument("--force", action="store_true",
+                         help="re-embed everything; also allows dropping most of the indexed files")
 
     p_search = sub.add_parser("search", help="query the index")
     p_search.add_argument("query")
@@ -694,7 +722,10 @@ def _main() -> None:
     args = parser.parse_args()
 
     if args.command == "build":
-        stats = build_index(game=args.game, force=args.force)
+        try:
+            stats = build_index(game=args.game, force=args.force)
+        except (ValueError, RuntimeError) as exc:
+            raise SystemExit(f"[Index] {exc}")
         print(
             f"[Index] {stats.documents} documents from {stats.files_seen} files "
             f"({stats.files_embedded} embedded, {stats.files_unchanged} unchanged)"

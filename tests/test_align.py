@@ -37,6 +37,24 @@ def test_unconfirmed_note_deeper_in_the_block_is_not_part_of_the_quote():
     assert _fragment_quote(block) == "Настоящий текст фрагмента."
 
 
+def test_hard_wrapped_quote_keeps_its_lazy_continuation_lines():
+    # Storyboards written from a hard-wrapped text.md: only the first line has ">".
+    block = ("> line one of narration\n"
+             "line two of the same paragraph\n"
+             "line three\n"
+             "\n"
+             "**Search query:** `x`\n")
+    assert _fragment_quote(block) == "line one of narration line two of the same paragraph line three"
+
+
+def test_hard_wrapped_paragraph_becomes_one_fragment_line():
+    from clipmaker.youtube_search import split_into_paragraphs
+    text = "word " * 25 + "\n" + "word " * 25 + "\n\n" + "other " * 45
+    first = split_into_paragraphs(text, min_words=40)[0]
+    assert "\n" not in first
+    assert len(first.split()) == 50
+
+
 # --- anchor confidence -----------------------------------------------------
 
 def test_exact_anchor_with_full_match_scores_one():

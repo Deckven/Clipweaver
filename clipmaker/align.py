@@ -26,16 +26,26 @@ WEAK_MATCH_RATIO = 0.5
 
 def _fragment_quote(block: str) -> str:
     """The fragment's full narration quote — every `>` line of the leading
-    blockquote, not just the first. Stops at the first non-quote content line,
-    so the `> **Unconfirmed**` note inside "My videos" is never swallowed.
+    blockquote, not just the first, plus Markdown "lazy" continuation lines
+    (a wrapped line right under a `>` line, before any blank line; storyboards
+    written before 2026-11 kept the narration's own line breaks). Stops at the
+    first content line after a blank line, so the `> **Unconfirmed**` note
+    inside "My videos" is never swallowed.
     """
     lines: list[str] = []
+    in_quote = False
     for line in block.splitlines():
         s = line.strip()
         if s.startswith(">"):
             lines.append(s.lstrip("> ").strip())
+            in_quote = True
             continue
         if not s:
+            if lines:
+                in_quote = False
+            continue
+        if in_quote:
+            lines.append(s)  # lazy continuation of the quote
             continue
         break  # first content line after (or before) the quote
     return " ".join(ln for ln in lines if ln)

@@ -116,7 +116,9 @@ def split_into_paragraphs(text: str, min_words: int = 40) -> list[str]:
     chunks = []
     buffer = ""
     for para in raw_paragraphs:
-        para = para.strip()
+        # A hard-wrapped paragraph is one paragraph: line breaks inside it would
+        # end the storyboard quote after its first line (align reads the quote).
+        para = " ".join(para.split())
         if not para:
             continue
 

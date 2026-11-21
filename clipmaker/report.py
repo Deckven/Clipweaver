@@ -348,7 +348,8 @@ def _strip_frontmatter(text: str) -> str:
 
 def list_projects() -> list[str]:
     """List available project folders."""
-    config.PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    if not config.PROJECTS_DIR.is_dir():
+        return []
     return sorted(
         p.name for p in config.PROJECTS_DIR.iterdir()
         if p.is_dir() and (p / "text.md").exists()
@@ -357,7 +358,7 @@ def list_projects() -> list[str]:
 
 def read_project_text(project: str) -> str:
     """Read the source text from a project folder."""
-    text_path = config.get_project_dir(project) / "text.md"
+    text_path = config.project_path(project) / "text.md"
     if not text_path.exists():
         raise FileNotFoundError(f"No text.md in project: {project}")
     raw = text_path.read_text(encoding="utf-8")
@@ -372,7 +373,7 @@ def load_query_overrides(project: str) -> dict[int, str]:
     footage is indexed under their English names. The override maps a fragment
     number to the query that actually finds the footage.
     """
-    path = config.get_project_dir(project) / "queries.json"
+    path = config.project_path(project) / "queries.json"
     if not path.exists():
         return {}
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -431,7 +432,7 @@ def generate_report(
         print(f"[Storyboard] Fragment {i}/{len(fragments)}: query=[{ascii(query)}]")
         lines.append(f"## Fragment {i}")
         lines.append("")
-        lines.append(f"> {fragment}")
+        lines.append("> " + " ".join(fragment.split()))
         lines.append("")
         lines.append(f"**Search query:** `{query}`")
         lines.append("")

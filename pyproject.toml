@@ -44,6 +44,7 @@ packages = ["clipmaker"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["real_data: reads the real catalog/projects instead of the per-test tmp folders"]
 
 [tool.ruff]
 target-version = "py311"

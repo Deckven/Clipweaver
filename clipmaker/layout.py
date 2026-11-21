@@ -138,11 +138,27 @@ def resolve_source(video_name: str, footage_dir: Path,
     return next((c for c in candidates if c.exists()), None)
 
 
-def find_precut_clip(clips_dir: Path, fragment: int) -> Path | None:
+def precut_name(fragment: int, video_name: str) -> str:
+    """File name clip_extractor gives the cut of `video_name` for a fragment."""
+    return f"{fragment:02d}_{Path(video_name).stem}.mp4"
+
+
+def find_precut_clip(clips_dir: Path, fragment: int, video_name: str) -> Path | None:
+    """The pre-cut clip of the fragment's CURRENT pick, or None.
+
+    clips/ may still hold a cut of an earlier pick (curation changed, or a
+    re-run failed): that file has another name and is never returned.
+    """
+    path = clips_dir / precut_name(fragment, video_name)
+    return path if path.is_file() else None
+
+
+def stale_precut_clips(clips_dir: Path, fragment: int, video_name: str | None) -> list[str]:
+    """Cuts in clips/ for this fragment that are not of its current pick."""
     if not clips_dir.is_dir():
-        return None
-    matches = sorted(clips_dir.glob(f"{fragment:02d}_*.mp4"))
-    return matches[0] if matches else None
+        return []
+    keep = precut_name(fragment, video_name) if video_name else None
+    return sorted(p.name for p in clips_dir.glob(f"{fragment:02d}_*.mp4") if p.name != keep)
 
 
 # --------------------------------------------------------------------------
@@ -170,7 +186,12 @@ def build_layout(timings: list[dict], fps: float, clips_dir: Path,
             res.uncovered.append(f"fr {num:02d} [{t.get('start_ts', '?')}] no video assigned")
             continue
 
-        precut = find_precut_clip(clips_dir, num)
+        stale = stale_precut_clips(clips_dir, num, video_name)
+        if stale:
+            res.warnings.append(
+                f"fr {num:02d}: clips/ has {', '.join(stale)} from an earlier pick, not "
+                f"{video_name} — ignored; re-run clip_extractor to refresh clips/")
+        precut = find_precut_clip(clips_dir, num, video_name)
         if precut is not None:
             path = precut
             take_offset_sec = 0.0

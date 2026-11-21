@@ -98,6 +98,21 @@ def resolve_source(video_name: str, footage_dir: Path,
     return next((c for c in candidates if c.exists()), None)
 
 
+
+def clear_fragment_clips(clips_dir: Path, fragment: int) -> list[str]:
+    """Delete every earlier cut of this fragment before cutting it again.
+
+    Without this a changed pick left the old NN_<old>.mp4 next to the new one,
+    and the old one could reach the timeline. Returns the deleted names."""
+    if not clips_dir.is_dir():
+        return []
+    removed = []
+    for old in sorted(clips_dir.glob(f"{fragment:02d}_*.mp4")):
+        old.unlink()
+        removed.append(old.name)
+    return removed
+
+
 def main(project: str) -> None:
     project_dir = config.project_path(project)
     clips_dir = project_dir / "clips"
@@ -124,6 +139,8 @@ def main(project: str) -> None:
     for t in timings:
         num = t["fragment"]
         duration = t["duration_sec"]
+        for old in clear_fragment_clips(clips_dir, num):
+            print(f"  Frag {num:2d}: removed old clip {old}")
         video_name = t.get("primary_video")
         preview = t.get("text_preview", "")
 
@@ -154,6 +171,12 @@ def main(project: str) -> None:
 
         start, end = float(t["clip_start"]), float(t["clip_end"])
         clip_dur = end - start
+        if clip_dur <= 0:
+            cut_lines.append(f"BAD RANGE: {video_name} {start:.3f}-{end:.3f}s — the end is "
+                             f"not after the start; fix curation.json")
+            cut_lines.append("")
+            print(f"  Frag {num:2d}: BAD RANGE {start:.3f}-{end:.3f}")
+            continue
         clip_name = f"{num:02d}_{Path(video_name).stem}.mp4"
         clip_path = clips_dir / clip_name
 
