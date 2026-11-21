@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+
+# Claude Code: only the skills are shared
+.claude/*
+!.claude/skills/
+
+# Your own games and capture folders (see GUIDE.md, section 3)
+clipmaker/games_local.py
+
+# Your footage and everything derived from it stays local
+footage/
+*.mp4
+*.mp3
+*.wav
+*.sfk
+_vlm_frames/
+_cache/
+frames/
+_index/
+_embeddings/
+_debug/
+projects/**/contact_sheet/
+projects/**/footage/
+vegas_scripts/*.log

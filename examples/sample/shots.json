@@ -1,0 +1,30 @@
+[
+  {
+    "fragment": 1,
+    "shots": [
+      "sailing ship firing cannons at enemy ships in a stormy sea"
+    ],
+    "expected": "Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4"
+  },
+  {
+    "fragment": 2,
+    "shots": [
+      "the player swims underwater near a reef"
+    ],
+    "expected": "Assassin's Creed IV Black Flag Resynced Anotto Bay Exploration 1.mp4"
+  },
+  {
+    "fragment": 3,
+    "shots": [
+      "ship upgrade menu at the harbourmaster showing hull armor and costs"
+    ],
+    "expected": "Assassin's Creed IV Black Flag Resynced Ship Upgrade Trading 1.mp4"
+  },
+  {
+    "fragment": 4,
+    "shots": [
+      "harpooning a shark from a small rowing boat"
+    ],
+    "expected": "Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4"
+  }
+]

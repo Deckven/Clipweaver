@@ -1,0 +1,910 @@
+{
+  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4",
+  "original_name": "Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich 1.mp4",
+  "duration_sec": 524,
+  "frame_interval_sec": 5,
+  "n_frames_analyzed": 105,
+  "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "analyzed_at": "2026-09-04T00:00:27+00:00",
+  "game": "assassins_creed_4",
+  "ocr_text": [
+    "World Without Gold",
+    "Destroy Maynard'$ armada",
+    "Nol Don't tell me",
+    "Jesus Christl",
+    "717m",
+    "We Il get them, Anne. But",
+    "we have to go,",
+    "nowl",
+    "Destroy Maynard",
+    "arada",
+    "There'$ going to be",
+    "Reckoning",
+    "for this Edward",
+    "mean",
+    "333m1",
+    "Destroy Maynard $ armada",
+    "Let fall the Courses and trim the Topsail",
+    "lads! We've",
+    "Bastard to catch!",
+    "Show Information",
+    "Camera",
+    "Camnera Roll",
+    "Take Photo",
+    "Field ol View",
+    "12mm",
+    "Preview",
+    "Cycle Grids",
+    "Rule of Thirds",
+    "Move Camera",
+    "Rotate Camera",
+    "Crane Down/Up",
+    "Back",
+    "Tutorials",
+    "Reset All",
+    "Reset Selected",
+    "875857m",
+    "736m1",
+    "613m",
+    "531m",
+    "381m",
+    "209m",
+    "169mn1",
+    "131m",
+    "154m",
+    "Tobacco",
+    "126m",
+    "Metal",
+    "Wood",
+    "Crew",
+    "201m",
+    "144m",
+    "Destroy Maynard' $ armada",
+    "Loot",
+    "Spice",
+    "234m",
+    "223m",
+    "Destr",
+    "238rn1",
+    "368rn1",
+    "349mn",
+    "HMS Ipswich",
+    "Disable the HMS Ipswich",
+    "Barrel",
+    "Mortar Ammo",
+    "This is what Maynard was building:",
+    "Not just an Armada, this floating",
+    "damned Fortress",
+    "The Bastard'$ been ahead",
+    "of us the whole time",
+    "Roales",
+    "X17",
+    "It'$ that bloody Armor,",
+    "We can't breach itl",
+    "Can' t use Travel Sails in storms",
+    "USC",
+    "ravel Sails in storms",
+    "Target the Mines! They'Il",
+    "hit below the Waterlinel",
+    "HMS",
+    "pswich",
+    "Cloth",
+    "Can't use Travel Sails in storms",
+    "There's no use trying to",
+    "get past that Armor.",
+    "That Armor'$ too strongl",
+    "That Armor\"$ too strongl",
+    "Target the Barrels!",
+    "Rescue"
+  ],
+  "title": "Battle Against HMS Ipswich",
+  "summary": "The player navigates a ship through a stormy sea, engaging in combat with enemy vessels as part of the mission \"Destroy Maynard's Armada.\" The player uses various cannons and maneuvers to target and destroy enemy ships, with visual indicators showing progress towards the objective. The player engages in a naval battle against the HMS Ipswich as part of the mission 'A World Without Gold'. The player maneuvers their ship amidst stormy conditions, targeting enemy vessels and engaging in combat using various weapons and tactics. The player engages in a naval battle against the HMS Ipswich under stormy conditions. The ship maneuvers skillfully, firing cannons at the enemy vessel while dodging incoming attacks. The player uses various tactics, including targeting barrels and using the ship's cannons to weaken the enemy. The player engages in a naval battle against the HMS Ipswich under stormy conditions. The objective is to disable the ship using various tactics, including boarding and strategic maneuvers. The player engages in a naval battle against the HMS Ipswich, using various ship maneuvers and weaponry to disable the enemy vessel amidst stormy conditions.",
+  "tags": [
+    "assassin_s_creed_iv_black_flag_resynced",
+    "assassins_creed_iv_black_flag_resynced",
+    "destroy_maynard_armada",
+    "pirate_ship",
+    "cannon_fire",
+    "enemy_vessels",
+    "stormy_sea",
+    "mission_objective",
+    "player_ship",
+    "engagement_sequence",
+    "ship_destruction",
+    "battle",
+    "naval_combat",
+    "HMS_Ipswich",
+    "stormy_seas",
+    "Assassin's_Creed_IV_Black_Flag_Resynced",
+    "ship_engagement",
+    "enemy_vessel",
+    "weather_conditions",
+    "stormy_weather",
+    "cannons",
+    "ship_maneuvering",
+    "barrel_targeting",
+    "player_tactics",
+    "naval_battle",
+    "disable_ship",
+    "board_ship",
+    "pirate_tactics",
+    "ship_maneuvers",
+    "disable_vessel",
+    "enemy_fleet",
+    "ship_battle"
+  ],
+  "timeline": [
+    {
+      "start": "00:00",
+      "end": "00:05",
+      "caption": "World Without Gold; Destroy Maynard'$ armada; Nol Don't tell me; Jesus Christl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:05",
+      "end": "00:10",
+      "caption": "717m; World Without Gold; Destroy Maynard'$ armada; We Il get them, Anne. But; we have to go,; nowl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:10",
+      "end": "00:15",
+      "caption": "World Without Gold; Destroy Maynard; arada; There'$ going to be; Reckoning; for this Edward; mean",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:15",
+      "end": "00:20",
+      "caption": "333m1; World Without Gold; Destroy Maynard $ armada; Let fall the Courses and trim the Topsail; lads! We've; Bastard to catch!",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:20",
+      "end": "00:25",
+      "caption": "World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:25",
+      "end": "00:30",
+      "caption": "Show Information; Camera; Camnera Roll; Take Photo; Field ol View; 12mm; Preview; Cycle Grids; Rule of Thirds; Move Camera; Rotate Camera; Crane Down/Up; Back; Tutorials; Reset All; Reset Selected",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:30",
+      "end": "00:45",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:45",
+      "end": "00:50",
+      "caption": "875857m",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:50",
+      "end": "00:55",
+      "caption": "736m1",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:55",
+      "end": "01:00",
+      "caption": "613m",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:00",
+      "end": "01:05",
+      "caption": "531m; World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:05",
+      "end": "01:10",
+      "caption": "381m",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:10",
+      "end": "01:15",
+      "caption": "209m; World Without Gold; Destroy Maynard $ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:15",
+      "end": "01:20",
+      "caption": "169mn1; World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:20",
+      "end": "01:25",
+      "caption": "131m; World Without Gold; Destroy Maynard; arada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:25",
+      "end": "01:30",
+      "caption": "154m; World Without Gold; Destroy Maynard'$ armada; Tobacco",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:30",
+      "end": "01:35",
+      "caption": "126m; World Without Gold; Destroy Maynard $ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:35",
+      "end": "01:40",
+      "caption": "World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:40",
+      "end": "01:45",
+      "caption": "World Without Gold; Destroy Maynard; arada; Metal; Wood; Crew",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:45",
+      "end": "01:50",
+      "caption": "World Without Gold; Destroy Maynard $ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:50",
+      "end": "01:55",
+      "caption": "201m; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:55",
+      "end": "02:00",
+      "caption": "144m; Destroy Maynard; arada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:00",
+      "end": "02:05",
+      "caption": "World Without Gold; Destroy Maynard; arada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:05",
+      "end": "02:10",
+      "caption": "World Without Gold; Destroy Maynard' $ armada; Loot",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:10",
+      "end": "02:15",
+      "caption": "World Without Gold; Destroy Maynard $ armada; Spice; Tobacco",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:15",
+      "end": "02:20",
+      "caption": "World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:20",
+      "end": "02:25",
+      "caption": "234m; World Without Gold; Destroy Maynard' $ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:25",
+      "end": "02:30",
+      "caption": "223m; World Without Gold; Destr",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:30",
+      "end": "02:35",
+      "caption": "World Without Gold; Destroy Maynard; arada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:35",
+      "end": "02:40",
+      "caption": "238rn1; World Without Gold; Destroy Maynard $ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:40",
+      "end": "02:45",
+      "caption": "World Without Gold; Destroy Maynard; arada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:45",
+      "end": "02:50",
+      "caption": "368rn1; World Without Gold",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:50",
+      "end": "02:55",
+      "caption": "349mn; World Without Gold; Destroy Maynard'$ armada",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:55",
+      "end": "03:05",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:05",
+      "end": "03:10",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Barrel; Mortar Ammo; This is what Maynard was building:",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:10",
+      "end": "03:15",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Not just an Armada, this floating; damned Fortress",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:15",
+      "end": "03:20",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; The Bastard'$ been ahead; of us the whole time",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:20",
+      "end": "03:25",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Tobacco; Roales; Wood; X17",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:25",
+      "end": "03:30",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Metal",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:30",
+      "end": "03:35",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:35",
+      "end": "03:40",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich; It'$ that bloody Armor,; We can't breach itl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:40",
+      "end": "03:45",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can' t use Travel Sails in storms",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:45",
+      "end": "03:50",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich; USC; ravel Sails in storms",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:50",
+      "end": "03:55",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Loot; Target the Mines! They'Il; hit below the Waterlinel",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "03:55",
+      "end": "04:00",
+      "caption": "HMS; pswich; World Without Gold; Disable the HMS Ipswich; Spice; Tobacco; Cloth; Can't use Travel Sails in storms; There's no use trying to; get past that Armor.",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "04:00",
+      "end": "04:25",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "04:25",
+      "end": "04:30",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor'$ too strongl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "04:30",
+      "end": "05:10",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:10",
+      "end": "05:15",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor\"$ too strongl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:15",
+      "end": "05:20",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:20",
+      "end": "05:25",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:25",
+      "end": "05:30",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Target the Barrels!",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:30",
+      "end": "05:55",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "05:55",
+      "end": "06:00",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:00",
+      "end": "06:05",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Tobacco; Spice",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:05",
+      "end": "06:10",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:10",
+      "end": "06:15",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:15",
+      "end": "06:20",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Rescue",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:20",
+      "end": "06:55",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "06:55",
+      "end": "07:00",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Loot",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:00",
+      "end": "07:05",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Target the Barrels!",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:05",
+      "end": "07:15",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:15",
+      "end": "07:20",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms; Rescue",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:20",
+      "end": "07:25",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Crew",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:25",
+      "end": "07:35",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:35",
+      "end": "07:40",
+      "caption": "HMS Ipswich; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "07:40",
+      "end": "08:15",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "08:15",
+      "end": "08:20",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms; That Armor'$ too strongl",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "08:20",
+      "end": "08:35",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "08:35",
+      "end": "08:44",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; Can't use Travel Sails in storms",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "start": "00:00",
+      "end": "00:10",
+      "type": "gameplay",
+      "description": "The player is on a ship in a stormy sea, preparing to engage enemy vessels."
+    },
+    {
+      "start": "00:10",
+      "end": "00:20",
+      "type": "gameplay",
+      "description": "The player engages an enemy ship, firing cannons and maneuvering around the vessel."
+    },
+    {
+      "start": "00:20",
+      "end": "00:30",
+      "type": "gameplay",
+      "description": "The player continues to engage multiple enemy ships, with visual indicators showing progress towards the mission objective."
+    },
+    {
+      "start": "00:30",
+      "end": "00:40",
+      "type": "gameplay",
+      "description": "The player successfully destroys an enemy ship, with visual confirmation of the destruction."
+    },
+    {
+      "start": "00:40",
+      "end": "00:50",
+      "type": "gameplay",
+      "description": "The player continues to navigate through the sea, preparing for further engagements."
+    },
+    {
+      "start": "02:05",
+      "end": "02:15",
+      "type": "gameplay",
+      "description": "The player is on a ship, preparing to engage in a naval battle. The environment is dark and stormy, with the player's ship positioned near enemy vessels."
+    },
+    {
+      "start": "02:15",
+      "end": "02:25",
+      "type": "gameplay",
+      "description": "The player uses a scope to target an enemy ship, indicating preparation for a ranged attack."
+    },
+    {
+      "start": "02:25",
+      "end": "02:35",
+      "type": "gameplay",
+      "description": "The player maneuvers the ship closer to the enemy, positioning themselves for a direct engagement."
+    },
+    {
+      "start": "02:35",
+      "end": "02:45",
+      "type": "gameplay",
+      "description": "The player engages in combat with the HMS Ipswich, firing cannons at the enemy vessel."
+    },
+    {
+      "start": "02:45",
+      "end": "02:55",
+      "type": "gameplay",
+      "description": "The player continues to maneuver and engage the enemy, with the ship's deck and crew visible as they fight."
+    },
+    {
+      "start": "02:55",
+      "end": "03:05",
+      "type": "gameplay",
+      "description": "The player uses a scope again to target another enemy ship, preparing for further combat."
+    },
+    {
+      "start": "04:10",
+      "end": "04:25",
+      "type": "gameplay",
+      "description": "The player is on a ship, preparing to engage the HMS Ipswich under stormy weather conditions."
+    },
+    {
+      "start": "04:25",
+      "end": "04:40",
+      "type": "gameplay",
+      "description": "The player maneuvers the ship, aiming to disable the HMS Ipswich."
+    },
+    {
+      "start": "04:40",
+      "end": "04:55",
+      "type": "gameplay",
+      "description": "The player uses a scope to target the HMS Ipswich, focusing on weakening it."
+    },
+    {
+      "start": "04:55",
+      "end": "05:10",
+      "type": "gameplay",
+      "description": "The player fires cannons at the HMS Ipswich, attempting to disable it amidst the storm."
+    },
+    {
+      "start": "05:10",
+      "end": "05:25",
+      "type": "gameplay",
+      "description": "The player continues to maneuver the ship, dodging enemy fire and targeting barrels."
+    },
+    {
+      "start": "05:25",
+      "end": "05:40",
+      "type": "gameplay",
+      "description": "The player uses the ship's cannons again, focusing on weakening the HMS Ipswich further."
+    },
+    {
+      "start": "05:40",
+      "end": "05:55",
+      "type": "gameplay",
+      "description": "The player targets barrels on the HMS Ipswich, hoping to cause damage."
+    },
+    {
+      "start": "05:55",
+      "end": "06:10",
+      "type": "gameplay",
+      "description": "The player continues to maneuver the ship, dodging enemy fire and targeting the HMS Ipswich."
+    },
+    {
+      "start": "06:15",
+      "end": "06:27",
+      "type": "gameplay",
+      "description": "The player approaches the HMS Ipswich under heavy rain, preparing for an engagement."
+    },
+    {
+      "start": "06:27",
+      "end": "06:39",
+      "type": "gameplay",
+      "description": "The player uses a scope to target specific areas on the HMS Ipswich, focusing on weak points."
+    },
+    {
+      "start": "06:39",
+      "end": "06:51",
+      "type": "gameplay",
+      "description": "The player boards the HMS Ipswich, engaging in close-quarters combat with enemy crew members."
+    },
+    {
+      "start": "06:51",
+      "end": "07:03",
+      "type": "gameplay",
+      "description": "The player continues to navigate the ship, targeting barrels and other objectives to weaken the HMS Ipswich."
+    },
+    {
+      "start": "07:03",
+      "end": "07:15",
+      "type": "gameplay",
+      "description": "The player uses a grappling hook to board another ship, continuing the battle amidst heavy rain."
+    },
+    {
+      "start": "07:15",
+      "end": "07:27",
+      "type": "gameplay",
+      "description": "The player engages in a firefight with enemy ships, attempting to disable the HMS Ipswich."
+    },
+    {
+      "start": "07:27",
+      "end": "07:39",
+      "type": "gameplay",
+      "description": "The player uses a scope to target the HMS Ipswich again, focusing on critical areas for disabling the ship."
+    },
+    {
+      "start": "07:39",
+      "end": "07:51",
+      "type": "gameplay",
+      "description": "The player boards the HMS Ipswich once more, engaging in intense combat with enemy crew members."
+    },
+    {
+      "start": "07:51",
+      "end": "08:03",
+      "type": "gameplay",
+      "description": "The player continues to navigate the ship, targeting barrels and other objectives to weaken the HMS Ipswich further."
+    },
+    {
+      "start": "08:03",
+      "end": "08:15",
+      "type": "gameplay",
+      "description": "The player uses a grappling hook to board another ship, continuing the battle amidst heavy rain and stormy conditions."
+    },
+    {
+      "start": "08:20",
+      "end": "08:25",
+      "type": "gameplay",
+      "description": "The player approaches the HMS Ipswich under dark, stormy skies."
+    },
+    {
+      "start": "08:25",
+      "end": "08:30",
+      "type": "gameplay",
+      "description": "The player uses a scope to target the HMS Ipswich, preparing for an attack."
+    },
+    {
+      "start": "08:30",
+      "end": "08:35",
+      "type": "gameplay",
+      "description": "The player maneuvers the ship closer to the HMS Ipswich, positioning for an assault."
+    },
+    {
+      "start": "08:35",
+      "end": "08:40",
+      "type": "gameplay",
+      "description": "The player engages the HMS Ipswich with gunfire, attempting to disable it."
+    },
+    {
+      "start": "08:40",
+      "end": "08:44",
+      "type": "gameplay",
+      "description": "The player continues to maneuver the ship, avoiding enemy fire while targeting the HMS Ipswich."
+    }
+  ],
+  "path_hints": {
+    "location": "Assassin’s Creed IV Black Flag Resynced",
+    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "entities": []
+  },
+  "suggested_filename": "Assassin's Creed IV Black Flag Resynced Battle Against HMS Ipswich.mp4"
+}

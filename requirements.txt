@@ -1,0 +1,37 @@
+# Full dependency list — mirrors pyproject.toml ([all] + [test]).
+# Install torch from the PyTorch index that matches your CUDA first, e.g.
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+# System tools, not pip packages: ffmpeg/ffprobe on PATH; Ollama for shot
+# queries and structured transcripts; Vegas Pro 22 for vegas_scripts/.
+
+# core
+numpy>=1.26
+Pillow>=10
+PyYAML>=6
+requests>=2.31
+
+# vlm
+torch>=2.3
+transformers>=4.45,<5
+accelerate>=0.30
+bitsandbytes>=0.43
+qwen-vl-utils>=0.0.8
+av>=12
+decord>=0.6
+sentencepiece>=0.2
+
+# ocr
+easyocr>=1.7
+opencv-python-headless>=4.8
+
+# search
+sentence-transformers>=3.0
+
+# transcribe
+faster-whisper>=1.0
+
+# youtube
+yt-dlp>=2024.1
+
+# test
+pytest>=8

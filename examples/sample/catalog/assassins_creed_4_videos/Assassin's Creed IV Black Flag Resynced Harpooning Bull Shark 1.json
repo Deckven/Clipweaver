@@ -1,0 +1,355 @@
+{
+  "source_path": "footage/raw/Assassin’s Creed IV Black Flag Resynced/Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4",
+  "original_name": "Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark 1.mp4",
+  "duration_sec": 179,
+  "frame_interval_sec": 5,
+  "n_frames_analyzed": 36,
+  "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "analyzed_at": "2026-08-16T21:26:37+00:00",
+  "game": "assassins_creed_4",
+  "ocr_text": [
+    "Animus",
+    "System",
+    "World",
+    "Inventory",
+    "Ship",
+    "Codex",
+    "Store",
+    "Crafting",
+    "Berserk Dart",
+    "Increase Berserk Dart duration.",
+    "Duration",
+    "Next Level",
+    "cOST",
+    "Humpback Whale Skin",
+    "Currently Restricted",
+    "Craft",
+    "Back",
+    "Tutorials",
+    "Health Upgrade",
+    "Increase Edward $ health:",
+    "Maximum",
+    "Iguana Leather",
+    "Sleep Dart /",
+    "Increase Sleep Dart duration:",
+    "Killer Whale Skin",
+    "Smoke Bomb Pouch",
+    "Increase Smoke Bomb capacity:",
+    "Capacity",
+    "Shanty Wheel",
+    "Pathfinder",
+    "Spyglass",
+    "Dry",
+    "Tortuga",
+    "Zoom *3",
+    "Close",
+    "Place marker",
+    "Legend",
+    "Recenter",
+    "Log",
+    "Easy",
+    "Crew",
+    "343m",
+    "220m",
+    "Side Activity",
+    "Harpooning",
+    "Bull Shark",
+    "ooning",
+    "Harpc",
+    "A Great Catch, Captain!",
+    "Release Wheel"
+  ],
+  "title": "Harpooning a Bull Shark",
+  "summary": "The player engages in crafting various items aboard a ship, focusing on enhancing weapon durability and health upgrades. The scenes transition between crafting menus and the ship's deck, highlighting the player's interaction with the game's crafting system. The player engages in a side activity of harpooning a bull shark while on a small boat. The shark is successfully caught and brought back to the ship.",
+  "tags": [
+    "assassin_s_creed_iv_black_flag_resynced",
+    "crafting",
+    "ship_interior",
+    "weapon_upgrade",
+    "health_upgrade",
+    "player_character",
+    "inventory_management",
+    "gameplay_ui",
+    "ship_navigation",
+    "harpooning_activity",
+    "harpooning",
+    "bull_shark",
+    "boat",
+    "ship",
+    "shark",
+    "side_activity",
+    "capture",
+    "water",
+    "ocean"
+  ],
+  "timeline": [
+    {
+      "start": "00:00",
+      "end": "00:05",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; Crafting; Berserk Dart; Increase Berserk Dart duration.; Duration; Next Level; cOST; Humpback Whale Skin; Currently Restricted; Craft; Back; Tutorials",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:05",
+      "end": "00:10",
+      "caption": "Animus; System; World; Inventory; Codex; Store; Crafting; Health Upgrade; Increase Edward $ health:; Maximum; Next Level; cOST; Iguana Leather; Currently Restricted; Craft; Back; Tutorials; Ship",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:10",
+      "end": "00:15",
+      "caption": "Animus; System; World; Inventory; Codex; Store; Crafting; Sleep Dart /; Increase Sleep Dart duration:; Duration; Next Level; cOST; Killer Whale Skin; Currently Restricted; Craft; Back; Tutorials",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:15",
+      "end": "00:20",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; Crafting; Smoke Bomb Pouch; Increase Smoke Bomb capacity:; Capacity; Next Level; cOST; Iguana Leather; Currently Restricted; Craft; Back; Tutorials",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:20",
+      "end": "00:25",
+      "caption": "Shanty Wheel; Pathfinder; Spyglass",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:25",
+      "end": "00:40",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:40",
+      "end": "00:45",
+      "caption": "Animus; System; World; Inventory; Codex; Store; Dry; Tortuga; Zoom *3; Close; Tutorials; Place marker; Legend; Recenter; Ship; Log; Easy",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:45",
+      "end": "00:50",
+      "caption": "Crew",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "00:50",
+      "end": "01:05",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:05",
+      "end": "01:10",
+      "caption": "343m",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:10",
+      "end": "01:15",
+      "caption": "220m",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:15",
+      "end": "01:40",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:40",
+      "end": "01:45",
+      "caption": "Side Activity; Harpooning; Bull Shark",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:45",
+      "end": "01:50",
+      "caption": "Side Activity; ooning; Bull Shark; Harpc",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:50",
+      "end": "01:55",
+      "caption": "Side Activity; Harpooning; Bull Shark",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "01:55",
+      "end": "02:00",
+      "caption": "Side Activity; ooning; Bull Shark",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:00",
+      "end": "02:10",
+      "caption": "Side Activity; Harpooning; Bull Shark",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:10",
+      "end": "02:15",
+      "caption": "Side Activity; ooning; Bull Shark; Harpc",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:15",
+      "end": "02:40",
+      "caption": "Side Activity; Harpooning; Bull Shark",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:40",
+      "end": "02:50",
+      "caption": "",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:50",
+      "end": "02:55",
+      "caption": "Shanty Wheel; A Great Catch, Captain!; Pathfinder; Spyglass; Release Wheel",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    },
+    {
+      "start": "02:55",
+      "end": "02:59",
+      "caption": "Release Wheel",
+      "tags": [
+        "assassin_s_creed_iv_black_flag_resynced"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "start": "00:00",
+      "end": "00:09",
+      "type": "ui",
+      "description": "The player accesses the crafting menu, selecting options to upgrade weapon durability."
+    },
+    {
+      "start": "00:09",
+      "end": "00:18",
+      "type": "ui",
+      "description": "The player continues crafting, now focusing on increasing health upgrades for the character."
+    },
+    {
+      "start": "00:18",
+      "end": "00:27",
+      "type": "ui",
+      "description": "The player selects an option to enhance sleep dart duration using killer whale skin."
+    },
+    {
+      "start": "00:27",
+      "end": "00:36",
+      "type": "ui",
+      "description": "The player chooses to increase smoke bomb capacity, preparing for potential combat scenarios."
+    },
+    {
+      "start": "00:36",
+      "end": "00:45",
+      "type": "gameplay",
+      "description": "The player transitions to the ship's deck, navigating through the ship's interior."
+    },
+    {
+      "start": "00:45",
+      "end": "01:00",
+      "type": "gameplay",
+      "description": "The player interacts with crew members while on the ship's deck, possibly discussing the next mission or strategy."
+    },
+    {
+      "start": "01:00",
+      "end": "01:09",
+      "type": "gameplay",
+      "description": "The player prepares to engage in a harpooning activity, targeting a bull shark."
+    },
+    {
+      "start": "01:09",
+      "end": "01:18",
+      "type": "gameplay",
+      "description": "The player successfully harpoons the bull shark, celebrating the catch as indicated by the in-game message."
+    },
+    {
+      "start": "02:05",
+      "end": "02:14",
+      "type": "gameplay",
+      "description": "The player is in a small boat, preparing to harpoon a bull shark."
+    },
+    {
+      "start": "02:14",
+      "end": "02:23",
+      "type": "gameplay",
+      "description": "The player throws the harpoon at the bull shark, which reacts to the attack."
+    },
+    {
+      "start": "02:23",
+      "end": "02:32",
+      "type": "gameplay",
+      "description": "The bull shark is seen thrashing in the water after being hit by the harpoon."
+    },
+    {
+      "start": "02:32",
+      "end": "02:41",
+      "type": "gameplay",
+      "description": "The player continues to pursue the bull shark, which is now struggling in the water."
+    },
+    {
+      "start": "02:41",
+      "end": "02:50",
+      "type": "gameplay",
+      "description": "The bull shark is now closer to the player's boat, indicating it has been successfully harpooned."
+    },
+    {
+      "start": "02:50",
+      "end": "02:59",
+      "type": "gameplay",
+      "description": "The bull shark is brought onto the ship, completing the harpooning mission."
+    }
+  ],
+  "path_hints": {
+    "location": "Assassin’s Creed IV Black Flag Resynced",
+    "location_folder": "Assassin’s Creed IV Black Flag Resynced",
+    "entities": []
+  },
+  "suggested_filename": "Assassin's Creed IV Black Flag Resynced Harpooning Bull Shark.mp4"
+}
