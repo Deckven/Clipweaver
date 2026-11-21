@@ -40,24 +40,13 @@
     "Sell",
     "Wine",
     "Ocean Wildlife Products",
-    "Wines like Madeira",
-    "Sack are status",
-    "Used for Treasure Dealer transactions and",
-    "Kenway' $ Fleet missions Wine can be",
-    "good",
     "VALUE",
     "Cargo",
     "Trade Goods",
     "Sell all",
     "Sell all Trade Goods",
-    "profit",
     "Tobacco",
-    "Though less common as most planters",
-    "Javor sugarcane",
-    "demand:",
-    "Kenway' $ Fleet missions Tobacco can be",
     "Rcales",
-    "Kenway' s Flect missions. Tobacco can be",
     "Round and Heated Shot IV",
     "Increases Round Shot and Heated Shot",
     "Next Level",
@@ -105,15 +94,12 @@
     "Royal Fortune Figurehead",
     "Rare Figurehead",
     "Figurehead",
-    "Black Bart'$ ship; the Royal Fortune",
     "Back",
     "The Jackdaw's Hull",
     "Common Hull",
     "Hull",
-    "Hull ornaments that once belonged to",
     "Buried Treasure Hull Trim",
     "Legendary Hull",
-    "Reinforced black hull with intricate gold",
     "The Black Ship's Sails",
     "Rare Sails",
     "Sails",
@@ -123,9 +109,7 @@
     "Wheel",
     "Crew",
     "Gray Sails",
-    "A set of gray canvas sails",
     "Dark Animus Corsair Sails",
-    "Raise high the colors;",
     "986m1"
   ],
   "title": "Ship Upgrade and Trading",
@@ -214,7 +198,7 @@
     {
       "start": "00:50",
       "end": "01:05",
-      "caption": "HARBOURMASTER; Sell; Wine; Ocean Wildlife Products; Wines like Madeira; Sack are status; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Wine can be; good; VALUE; Cargo; Trade Goods; Reales; Sell; Sell all; Close; Sell all Trade Goods; profit",
+      "caption": "HARBOURMASTER; Sell; Wine; Ocean Wildlife Products; VALUE; Cargo; Trade Goods; Reales; Sell; Sell all; Close; Sell all Trade Goods",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -222,7 +206,7 @@
     {
       "start": "01:05",
       "end": "01:10",
-      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; demand:; Used for Treasure Dealer transactions and; Kenway' $ Fleet missions Tobacco can be; good; Cargo; Trade Goods; VALUE; Sell; Sell all; Close; Sell all Trade Goods; Rcales",
+      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Cargo; Trade Goods; VALUE; Sell; Sell all; Close; Sell all Trade Goods; Rcales",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -230,7 +214,7 @@
     {
       "start": "01:10",
       "end": "01:15",
-      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Though less common as most planters; Javor sugarcane; demand:; Used for Treasure Dealer transactions and; Kenway' s Flect missions. Tobacco can be; good; Cargo; Trade Goods; VALUE; Reales; Sell; Sell all; Close; Sell all Trade Goods",
+      "caption": "HARBOURMASTER; Sell; Tobacco; Ocean Wildlife Products; Cargo; Trade Goods; VALUE; Reales; Sell; Sell all; Close; Sell all Trade Goods",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -358,7 +342,7 @@
     {
       "start": "02:35",
       "end": "02:45",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Royal Fortune Figurehead; Rare Figurehead; Arsenal; Upgrades; Appearance; Figurehead; Black Bart'$ ship; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Royal Fortune Figurehead; Rare Figurehead; Arsenal; Upgrades; Appearance; Figurehead; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -366,7 +350,7 @@
     {
       "start": "02:45",
       "end": "02:50",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; The Jackdaw's Hull; Common Hull; Arsenal; Upgrades; Appearance; Hull; Hull ornaments that once belonged to; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; The Jackdaw's Hull; Common Hull; Arsenal; Upgrades; Appearance; Hull; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -374,7 +358,7 @@
     {
       "start": "02:50",
       "end": "02:55",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Buried Treasure Hull Trim; Legendary Hull; Arsenal; Upgrades; Appearance; Hull; Reinforced black hull with intricate gold; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Buried Treasure Hull Trim; Legendary Hull; Arsenal; Upgrades; Appearance; Hull; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -398,7 +382,7 @@
     {
       "start": "03:05",
       "end": "03:10",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Gray Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; A set of gray canvas sails; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Gray Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -406,7 +390,7 @@
     {
       "start": "03:10",
       "end": "03:15",
-      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Dark Animus Corsair Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; Raise high the colors;; Back",
+      "caption": "Animus; System; World; Inventory; Ship; Codex; Store; JACKDA W; Dark Animus Corsair Sails; Rare Sails; Arsenal; Upgrades; Appearance; Sails; Back",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]

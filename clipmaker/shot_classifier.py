@@ -180,7 +180,14 @@ def extract_stock_query(text: str, game: str | None = None) -> str:
 
 
 if __name__ == "__main__":
-    test_fragments = [
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Shot type and stock query for narration fragments "
+                                 "(no arguments: a built-in Russian demo)")
+    ap.add_argument("fragment", nargs="*", help="narration fragments to classify")
+    ap.add_argument("--game", default="diablo4", help="game key for the stock query hint")
+    args = ap.parse_args()
+    test_fragments = args.fragment or [
         "Я вернулся в Diablo IV после полутора лет перерыва, когда вышел Lord of Hatred.",
         "Босс был настолько сложный, что я потратил три часа на одну попытку прохождения.",
         "По оценкам Steam и Metacritic, дополнение получило 85 баллов.",
@@ -188,7 +195,7 @@ if __name__ == "__main__":
     ]
     for frag in test_fragments:
         print(f"Text: {frag[:60]}...")
-        types = classify_fragment(frag, game="diablo4")
+        types = classify_fragment(frag, game=args.game)
         print(f"  Types: {[(t, f'{s:.2f}') for t, s in types[:3]]}")
-        print(f"  Stock query: {extract_stock_query(frag, game='diablo4')}")
+        print(f"  Stock query: {extract_stock_query(frag, game=args.game)}")
         print()

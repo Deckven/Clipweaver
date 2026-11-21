@@ -43,7 +43,7 @@ It does not edit the video, choose music or judge pacing.
 |---|---|---|
 | Python 3.11+, ffmpeg and ffprobe on `PATH` | everything | |
 | CUDA GPU, 12 GB+ VRAM | indexing (`analyzer`), transcription | tested on 16 GB; the 7B vision model in NF4 takes about 5 GB, a 10-frame call peaks at 9.8 GB |
-| [Ollama](https://ollama.com) with `mistral-small` | picture queries (`shot_query`), structured transcripts | without it the search embeds the paragraph itself — worse, but it works |
+| [Ollama](https://ollama.com) with `mistral-small` | picture queries (`shot_query`), structured transcripts | without it the storyboard falls back to keyword matches by video, without a moment |
 | Vegas Pro 22 | the timeline loader | the rest of the pipeline does not need it |
 | Pexels / Pixabay API keys | stock footage in `production_plan` | optional |
 
@@ -226,7 +226,7 @@ python -m clipmaker.report <project> my_game
 ```
 
 Several games in one video: `"game_a,game_b"`. Add `--images` (or
-`--images=N`) for still images from game wikis and Wikimedia Commons for
+`--images=N`) after the project and game for still images from game wikis and Wikimedia Commons for
 fragments without footage.
 
 Read `storyboard.md`: for each fragment — the text, the picture queries, your

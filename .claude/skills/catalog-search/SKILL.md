@@ -18,9 +18,9 @@ catalog/
   <game>_videos/              — one folder per key in GAMES (catalog_subdir)
     <subfolder>/              — mirrors the capture subfolders (subdir_overrides renames them)
   _index/                     — semantic index (embed_index build)
-
-The bundled sample: examples/sample/catalog/assassins_creed_4_videos/ (4 entries).
 ```
+
+The bundled sample: `examples/sample/catalog/assassins_creed_4_videos/` (4 entries).
 
 ## Searchable Fields
 

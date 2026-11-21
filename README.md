@@ -47,8 +47,9 @@ moment (±5 s) is in the top 10 results.
 | Picture queries written before searching (one video) | 40 | 45% | 70% |
 | All three videos, incl. labels written after the edit | 266 | 23% | 35% |
 
-The 40 are part of the 266. The gold set holds 346 queries; 44 of them are
-confirmed by hand so far, so treat the numbers as a floor with wide error bars.
+The 40 are part of the 266. The gold set holds 346 queries: 4 were marked wrong
+by hand and 76 point at footage outside the indexed catalog, which leaves 266;
+44 of the 346 are confirmed by hand so far, so treat the numbers as a floor with wide error bars.
 The catalog and the gold set are private, so these numbers cannot be reproduced
 from this repository; `clipmaker.retrieval_eval` runs the same measurement on
 your own catalog.

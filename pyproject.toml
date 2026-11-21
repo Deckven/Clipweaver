@@ -29,7 +29,7 @@ vlm = [
     "decord>=0.6",
     "sentencepiece>=0.2",
 ]
-# On-screen text in the catalog (HUD, tickers, item names).
+# On-screen text in the catalog (HUD, place and item names, numbers).
 ocr = ["easyocr>=1.7", "opencv-python-headless>=4.8"]
 # Semantic search over the catalog (multilingual E5 embeddings).
 search = ["sentence-transformers>=3.0"]

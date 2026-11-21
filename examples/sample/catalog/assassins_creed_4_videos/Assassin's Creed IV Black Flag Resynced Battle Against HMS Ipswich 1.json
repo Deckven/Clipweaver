@@ -13,10 +13,8 @@
     "717m",
     "Destroy Maynard",
     "arada",
-    "Reckoning",
     "333m1",
     "Destroy Maynard $ armada",
-    "Let fall the Courses and trim the Topsail",
     "Show Information",
     "Camera",
     "Camnera Roll",
@@ -62,7 +60,6 @@
     "Disable the HMS Ipswich",
     "Barrel",
     "Mortar Ammo",
-    "The Bastard'$ been ahead",
     "Roales",
     "X17",
     "Can' t use Travel Sails in storms",
@@ -70,8 +67,6 @@
     "HMS",
     "pswich",
     "Cloth",
-    "That Armor'$ too strongl",
-    "That Armor\"$ too strongl",
     "Rescue"
   ],
   "title": "Battle Against HMS Ipswich",
@@ -130,7 +125,7 @@
     {
       "start": "00:10",
       "end": "00:15",
-      "caption": "World Without Gold; Destroy Maynard; arada; Reckoning",
+      "caption": "World Without Gold; Destroy Maynard; arada",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -138,7 +133,7 @@
     {
       "start": "00:15",
       "end": "00:20",
-      "caption": "333m1; World Without Gold; Destroy Maynard $ armada; Let fall the Courses and trim the Topsail",
+      "caption": "333m1; World Without Gold; Destroy Maynard $ armada",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -402,7 +397,7 @@
     {
       "start": "03:15",
       "end": "03:20",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; The Bastard'$ been ahead",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -482,7 +477,7 @@
     {
       "start": "04:25",
       "end": "04:30",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor'$ too strongl",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -498,7 +493,7 @@
     {
       "start": "05:10",
       "end": "05:15",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor\"$ too strongl",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -650,7 +645,7 @@
     {
       "start": "08:15",
       "end": "08:20",
-      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich; That Armor'$ too strongl",
+      "caption": "HMS Ipswich; World Without Gold; Disable the HMS Ipswich",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]

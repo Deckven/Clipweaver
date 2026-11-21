@@ -108,7 +108,6 @@ python -m clipmaker.align <project-name>
 
 The project is a positional argument (e.g. `my_game/drafts/<slug>`);
 `--project <project-name>` works too.
-is merged; before that it fails with "No storyboard.md".
 
 **What it does:**
 1. Reads fragments from `storyboard.md`

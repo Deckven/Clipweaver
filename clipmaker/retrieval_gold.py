@@ -13,7 +13,7 @@ Two source shapes:
                   Events with the same label in one video form one item with
                   several acceptable picks.
 
-The owner confirms the pairs in eval/retrieval_review.md; apply_review() carries
+A reviewer confirms the pairs in eval/retrieval_review.md; apply_review() carries
 the marks back into the YAML. Rebuilding the gold keeps confirmed statuses.
 """
 from __future__ import annotations
@@ -28,17 +28,17 @@ import yaml
 
 from .retrieval_eval import LAYERS, load_entries, name_key
 
-SOURCES = (
-    {"id": "ac4-gold-mats", "title": "AC Black Flag Resynced — Jackdaw Gold and Mats",
-     "game": "assassins_creed_4", "kind": "shots_curation",
-     "project": "assassins_creed_black_flag/AC Black Flag Resynced Jackdaw Gold and Mats"},
-    {"id": "ac4-upgrades", "title": "AC Black Flag Resynced — Jackdaw Upgrades (v2)",
-     "game": "assassins_creed_4", "kind": "events", "events": "vegas_events.json",
-     "project": "assassins_creed_black_flag/AC Black Flag Resynced Jackdaw Upgrades"},
-    {"id": "eve-where-to-live", "title": "EVE Online — Where to live",
-     "game": "eve_online", "kind": "events", "events": "footage_events.json",
-     "project": "eve_online/drafts/eve_online_where_to_live"},
-)
+SOURCES_PATH = Path(__file__).resolve().parent.parent / "eval" / "gold_sources.yaml"
+
+
+def load_sources(path: Path = SOURCES_PATH) -> list[dict]:
+    """The finished videos the gold set is built from, as a YAML list of
+    {id, title, game, kind: shots_curation | events, project, events?}; none when
+    the file is absent (eval/ is your own)."""
+    if not path.exists():
+        return []
+    return list(yaml.safe_load(path.read_text(encoding="utf-8")) or [])
+
 
 PREFIXES = ("Assassin's Creed IV Black Flag Resynced ", "Assassin's Creed™ Black Flag Resynced")
 WRONG_MARKS = {"x", "х", "✗", "-", "wrong", "нет"}
@@ -108,7 +108,7 @@ def _git_ref(path: Path) -> str:
 
 def build_gold(projects_dir: Path, catalog_dir: Path) -> dict:
     videos, items = [], []
-    for src in SOURCES:
+    for src in load_sources():
         project = Path(projects_dir) / src["project"]
         known = {name_key(e["original_name"]) for e in load_entries(catalog_dir, src["game"])}
         if src["kind"] == "shots_curation":
@@ -135,7 +135,7 @@ def _pick_sig(item: dict) -> list[tuple]:
 
 
 def merge_reviews(new: dict, old: dict | None) -> dict:
-    """Keep the owner's verdicts (and edited queries) from a previous gold file.
+    """Keep the reviewer's verdicts (and edited queries) from a previous gold file.
 
     Event ids are positional, so a verdict is carried over only when the item
     still has the same picks — an edited events file never moves a verdict onto
@@ -275,7 +275,7 @@ def parse_sheet(text: str) -> dict[str, tuple[str, bool]]:
 
 
 def apply_review(gold: dict, sheet_text: str) -> tuple[dict, dict[str, int]]:
-    """Return a new gold dict with the owner's marks applied, plus counts."""
+    """Return a new gold dict with the reviewer's marks applied, plus counts."""
     marks = parse_sheet(sheet_text)
     counts = {"ok": 0, "wrong": 0, "edited": 0, "cleared": 0, "untouched": 0}
     items = []

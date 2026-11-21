@@ -1,8 +1,8 @@
 """Regex grep over a game's VLM catalog: timeline captions/OCR and scene text.
 
 The semantic index (embed_index) answers "show me a picture like this"; this
-answers "where does this exact word appear on screen" — a ticker, a system
-code, an item name, a number. Each hit is a moment (timecode), not just a file.
+answers "where does this exact word appear on screen" — a place name, a code,
+an item name, a number. Each hit is a moment (timecode), not just a file.
 
 Usage:
     python -m clipmaker.ocrgrep "<regex>" --game <game> [--per-file 4] [--file <name substring>]

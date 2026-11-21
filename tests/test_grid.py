@@ -1,4 +1,4 @@
-"""clipmaker.grid — moved from projects/*/tools/grid.py (AC4, EoE16, EVE copies)."""
+"""clipmaker.grid: a labelled frame grid of one capture, found by name."""
 
 import shutil
 import subprocess

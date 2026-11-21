@@ -34,16 +34,11 @@
     "Projects Reward",
     "Available",
     "Claim",
-    "nowin",
     "Open Animus",
-    "there'",
     "Loot",
     "Anomaly Stabilized",
     "Entity Procurement",
     "Sweep enemies",
-    "(Worthless",
-    "Now; how",
-    "Dog:",
     "13m",
     "Rcales",
     "Smoke Bomb",
@@ -51,7 +46,6 @@
     "Bullet",
     "Bulle",
     "Anotto Bay Smuggler'$ Chest Key",
-    "This Treasure is mine now:",
     "Anottor",
     "Remedy",
     "Animus",
@@ -443,7 +437,7 @@
     {
       "start": "12:45",
       "end": "12:50",
-      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Open Animus; there'",
+      "caption": "Anotto Bay; Projects Reward; Available; Claim; Open Animus",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -451,7 +445,7 @@
     {
       "start": "12:50",
       "end": "12:55",
-      "caption": "Anotto Bay; Projects Reward; Available; Claim; nowin; Open Animus; Loot",
+      "caption": "Anotto Bay; Projects Reward; Available; Claim; Open Animus; Loot",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -459,7 +453,7 @@
     {
       "start": "12:55",
       "end": "13:00",
-      "caption": "Anotto Bay; Anomaly Stabilized; Entity Procurement; Sweep enemies; (Worthless; Now; how; Dog:",
+      "caption": "Anotto Bay; Anomaly Stabilized; Entity Procurement; Sweep enemies",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
@@ -499,7 +493,7 @@
     {
       "start": "13:45",
       "end": "13:50",
-      "caption": "Anotto Bay; Anotto Bay Smuggler'$ Chest Key; This Treasure is mine now:",
+      "caption": "Anotto Bay; Anotto Bay Smuggler'$ Chest Key",
       "tags": [
         "assassin_s_creed_iv_black_flag_resynced"
       ]
