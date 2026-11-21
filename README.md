@@ -1,4 +1,6 @@
-# Clipmaker
+# Clipweaver
+
+*Python package: `clipmaker` — every step runs as `python -m clipmaker.<step>`.*
 
 A pre-production assistant for game video essays: it indexes your own gameplay
 footage with a local vision-language model, finds the moments your narration

@@ -1,9 +1,9 @@
-# Clipmaker user guide
+# Clipweaver user guide
 
-What each part of Clipmaker does, and how to go from your own gameplay captures
+What each part of Clipweaver (package `clipmaker`) does, and how to go from your own gameplay captures
 and a narration to a B-roll timeline in Vegas Pro, step by step.
 
-Clipmaker is a pre-production assistant. It finds the right moments in hours of
+Clipweaver is a pre-production assistant. It finds the right moments in hours of
 footage, lays them against your narration and places them on the timeline. The
 final edit — pacing, cuts, music, the last picks — stays with you.
 
