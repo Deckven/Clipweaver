@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from . import config
+from . import catalog as _catalog
 
 
 def iter_records(game: str):
@@ -22,7 +23,7 @@ def iter_records(game: str):
         return
     for jf in sorted(catalog_dir.glob("*.json")):
         try:
-            yield jf, json.loads(jf.read_text(encoding="utf-8"))
+            yield jf, _catalog.read_entry(jf)
         except Exception as e:
             print(f"  skip {jf.name}: {e}")
 
@@ -65,7 +66,7 @@ def main():
         print(f"  {src.name}\n    -> {tgt.name}")
         if args.apply:
             src.rename(tgt)
-            rec = json.loads(jf.read_text(encoding="utf-8"))
+            rec = _catalog.read_entry(jf)
             rec["source_path"] = str(tgt)
             rec["original_name"] = tgt.name
             jf.write_text(json.dumps(rec, ensure_ascii=False, indent=2), encoding="utf-8")

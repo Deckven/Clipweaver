@@ -85,7 +85,70 @@ class ShotQuery:
     """One visual description derived from a narration fragment."""
 
     text: str
-    source: str  # "llm" | "fragment"
+    source: str  # "written" (shots.json) | "llm" (Ollama) | "fragment" (the narration itself)
+    game: str | None = None  # search only this game's catalog; None = the episode's games
+
+
+def load_written_shots(path: Path) -> dict[int, list[ShotQuery]]:
+    """Picture queries written for the project before searching (``shots.json``).
+
+    Two shapes are accepted::
+
+        {"game": "my_game", "1": ["query", ...], "2": [...]}        # keys "_..." are notes
+        [{"fragment": 1, "game": "my_game", "shots": ["query", ...]}, ...]
+
+    A query is a string or ``{"text": ..., "game": ...}``. ``game`` may be set
+    for the whole file, for a fragment or for one query (the closest wins) and
+    must be a key of GAMES. An empty list means "nothing filmable here". A
+    missing file gives ``{}``; a malformed one raises ValueError naming the spot.
+    """
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path}: not valid JSON ({exc})") from exc
+
+    if isinstance(data, dict):
+        file_game = data.get("game") or data.get("_game")
+        items = [(key, None, value) for key, value in data.items()
+                 if not key.startswith("_") and key != "game"]
+    elif isinstance(data, list):
+        file_game = None
+        items = []
+        for n, item in enumerate(data):
+            if not isinstance(item, dict) or "fragment" not in item:
+                raise ValueError(f"{path}: item {n} needs a \"fragment\" number")
+            items.append((item["fragment"], item.get("game"), item.get("shots", [])))
+    else:
+        raise ValueError(f"{path}: expected an object or a list")
+
+    out: dict[int, list[ShotQuery]] = {}
+    for key, frag_game, queries in items:
+        try:
+            num = int(key)
+        except (TypeError, ValueError):
+            raise ValueError(f"{path}: fragment key {key!r} is not a number") from None
+        if num < 1:
+            raise ValueError(f"{path}: fragment numbers start at 1, got {num}")
+        if not isinstance(queries, list):
+            raise ValueError(f"{path}: fragment {num}: expected a list of queries")
+        shots = []
+        for q in queries:
+            if isinstance(q, str):
+                text, game = q, None
+            elif isinstance(q, dict) and isinstance(q.get("text"), str):
+                text, game = q["text"], q.get("game")
+            else:
+                raise ValueError(f"{path}: fragment {num}: a query must be a string or "
+                                 f"{{\"text\": ..., \"game\": ...}}")
+            game = game or frag_game or file_game
+            if game is not None and game not in config.GAMES:
+                raise ValueError(f"{path}: fragment {num}: unknown game {game!r}")
+            if text.strip():
+                shots.append(ShotQuery(text=text.strip(), source="written", game=game))
+        out[num] = shots
+    return out
 
 
 def _vocab_block(game: str | None) -> str:

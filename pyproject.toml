@@ -36,8 +36,10 @@ search = ["sentence-transformers>=3.0"]
 transcribe = ["faster-whisper>=1.0"]
 # YouTube search and remote stills.
 youtube = ["yt-dlp>=2024.1"]
-all = ["clipmaker[vlm,ocr,search,transcribe,youtube]"]
-test = ["pytest>=8"]
+# Timeline export to DaVinci Resolve (OpenTimelineIO; the FCPXML needs nothing).
+resolve = ["opentimelineio>=0.17"]
+all = ["clipmaker[vlm,ocr,search,transcribe,youtube,resolve]"]
+test = ["pytest>=8", "opentimelineio>=0.17"]
 
 [tool.setuptools]
 packages = ["clipmaker"]

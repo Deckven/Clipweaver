@@ -62,6 +62,24 @@ PROJECTS_DIR = _env_path("CLIPMAKER_PROJECTS_DIR", ROOT_DIR / "projects")
 RAW_FOOTAGE_DIR = _env_path("CLIPMAKER_RAW_FOOTAGE_DIR", ROOT_DIR / "footage" / "raw")
 EDIT_PROJECTS_DIR = _env_path("CLIPMAKER_EDIT_PROJECTS_DIR", ROOT_DIR / "footage" / "edit")
 
+
+def parse_path_map(text: str | None) -> list[tuple[str, str]]:
+    """``"OLD => NEW; OLD2 => NEW2"`` as (old, new) pairs, longest OLD first."""
+    pairs = []
+    for part in (text or "").split(";"):
+        if "=>" not in part:
+            continue
+        old, new = (s.strip().replace("\\", "/").rstrip("/") for s in part.split("=>", 1))
+        if old and new:
+            pairs.append((old, new))
+    return sorted(pairs, key=lambda p: len(p[0]), reverse=True)
+
+
+# Footage that moved (an archive drive, a renamed folder): a catalog or layout
+# path starting with OLD is also looked up under NEW. Only lookups change — the
+# catalog keeps the paths it was indexed with.
+PATH_MAP = parse_path_map(_env_str("CLIPMAKER_PATH_MAP"))
+
 # Stock footage API keys (None = skip provider)
 PEXELS_API_KEY: str | None = _env_str("PEXELS_API_KEY")
 PIXABAY_API_KEY: str | None = _env_str("PIXABAY_API_KEY")

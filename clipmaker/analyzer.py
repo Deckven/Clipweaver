@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config
+from . import catalog as _catalog
 from .game_vocab import vocab_for, render_vocab_hint, match_entities, match_region
 
 
@@ -1219,7 +1220,7 @@ def regenerate_suggestions(game: str, dry_run: bool = False) -> int:
     updated = 0
     for p in sorted(cat_dir.rglob("*.json")):
         try:
-            rec = json.loads(p.read_text(encoding="utf-8"))
+            rec = _catalog.read_entry(p)
         except Exception as e:
             print(f"  SKIP (bad json): {p.name} — {e}")
             continue
@@ -1251,7 +1252,7 @@ def _rename_plan(game: str) -> list[tuple[Path, Path, Path, Path]]:
     entries: list[tuple[Path, str, Path]] = []
     for jp in sorted(cat_dir.rglob("*.json")):
         try:
-            rec = json.loads(jp.read_text(encoding="utf-8"))
+            rec = _catalog.read_entry(jp)
         except Exception:
             continue
         src = Path(rec.get("source_path") or "")
@@ -1335,7 +1336,7 @@ def rename_from_catalog(game: str, dry_run: bool) -> int:
             continue
         # Update JSON contents to reflect new paths, then rename the JSON.
         try:
-            rec = json.loads(old_j.read_text(encoding="utf-8"))
+            rec = _catalog.read_entry(old_j)
             rec["source_path"] = str(new_v)
             rec["original_name"] = new_v.name
             save_record(rec, old_j)

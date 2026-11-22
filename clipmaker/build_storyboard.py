@@ -30,6 +30,7 @@ import sys
 from pathlib import Path
 
 from . import config
+from . import catalog as _catalog
 
 CLIP_PAD_SEC = 5.0
 
@@ -68,22 +69,7 @@ def load_moments(project_dir: Path) -> dict[int, list[dict]]:
 def load_catalog_index(games: list[str] | None = None) -> dict[str, dict]:
     """Catalog entries by original_name. All games by default — a storyboard
     may mix titles (AC lore episodes span three catalogs in one script)."""
-    index: dict[str, dict] = {}
-    for game in (games or list(config.GAMES)):
-        game_cfg = config.GAMES.get(game)
-        if not game_cfg:
-            continue
-        cat_dir = config.CATALOG_DIR / game_cfg["catalog_subdir"]
-        if not cat_dir.exists():
-            continue
-        for p in cat_dir.rglob("*.json"):
-            try:
-                data = json.loads(p.read_text(encoding="utf-8-sig"))
-                data["_game"] = game
-                index[data.get("original_name", "")] = data
-            except (json.JSONDecodeError, OSError):
-                continue
-    return index
+    return _catalog.load_index(games or None)
 
 
 # ---------------------------------------------------------------------------

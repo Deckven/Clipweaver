@@ -15,6 +15,7 @@ import subprocess
 from pathlib import Path
 
 from . import config
+from . import catalog as _catalog
 
 CATALOG_DIR = config.CATALOG_DIR
 
@@ -26,19 +27,7 @@ def _sec_to_ts(sec: float) -> str:
 
 
 def load_catalog_index(game: str) -> dict[str, dict]:
-    game_cfg = config.GAMES.get(game)
-    if not game_cfg:
-        return {}
-    cat_dir = CATALOG_DIR / game_cfg["catalog_subdir"]
-    index = {}
-    for p in cat_dir.rglob("*.json"):
-        try:
-            # utf-8-sig tolerates a leading BOM (some catalog files have one)
-            data = json.loads(p.read_text(encoding="utf-8-sig"))
-            index[data.get("original_name", "")] = data
-        except (json.JSONDecodeError, OSError):
-            continue
-    return index
+    return _catalog.load_index([game])
 
 
 def build_cut_cmd(source: Path, start_sec: float, end_sec: float, out: Path,
@@ -84,18 +73,7 @@ def extract_clip(source: Path, start_sec: float, end_sec: float, out: Path) -> b
     return False
 
 
-def resolve_source(video_name: str, footage_dir: Path,
-                   catalog: dict[str, dict]) -> Path | None:
-    """Try, in order: project footage/ override; the catalog source_path as-is;
-    source_path's folder + original_name (files renamed to the descriptive name
-    leave source_path pointing at the old raw name)."""
-    entry = catalog.get(video_name, {})
-    orig = entry.get("source_path", "")
-    candidates = [footage_dir / video_name]
-    if orig:
-        candidates.append(Path(orig))
-        candidates.append(Path(orig).parent / video_name)
-    return next((c for c in candidates if c.exists()), None)
+resolve_source = _catalog.resolve_source
 
 
 

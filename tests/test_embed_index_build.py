@@ -73,3 +73,13 @@ def test_save_leaves_no_temp_files(catalog):
     embed_index.build_index()
     names = sorted(p.name for p in config.EMBED_INDEX_DIR.iterdir())
     assert names == ["docs.json", "manifest.json", "vectors.npz"]
+
+
+def test_changed_document_rules_rebuild_every_file(catalog, monkeypatch):
+    embed_index.build_index()
+    assert embed_index.build_index().files_embedded == 0
+    monkeypatch.setattr(embed_index, "DOC_RULES", embed_index.DOC_RULES + 1)
+    with pytest.raises(ValueError, match="full build"):
+        embed_index.build_index(game="g")
+    assert embed_index.build_index().files_embedded == 4
+    assert embed_index.build_index().files_embedded == 0

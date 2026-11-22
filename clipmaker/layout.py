@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import config
+from . import catalog as _catalog
 from .vegas_takes import TAKES_COMMENT, TakeSegment, VegasConfig, find_vegas_config
 
 LAYOUT_VERSION = 2
@@ -108,34 +109,10 @@ def probe_duration_sec(path: Path) -> float | None:
 
 
 def load_catalog_index(games: list[str]) -> dict[str, dict]:
-    index: dict[str, dict] = {}
-    for game in games:
-        game_cfg = config.GAMES.get(game)
-        if not game_cfg:
-            continue
-        cat_dir = config.CATALOG_DIR / game_cfg["catalog_subdir"]
-        if not cat_dir.exists():
-            continue
-        for p in cat_dir.rglob("*.json"):
-            try:
-                data = json.loads(p.read_text(encoding="utf-8-sig"))
-                index[data.get("original_name", "")] = data
-            except (json.JSONDecodeError, OSError):
-                continue
-    return index
+    return _catalog.load_index(games)
 
 
-def resolve_source(video_name: str, footage_dir: Path,
-                   catalog: dict[str, dict]) -> Path | None:
-    """Same resolution order clip_extractor uses: footage/, catalog source_path,
-    source_path's folder + the (possibly renamed) original_name."""
-    entry = catalog.get(video_name, {})
-    orig = entry.get("source_path", "")
-    candidates = [footage_dir / video_name]
-    if orig:
-        candidates.append(Path(orig))
-        candidates.append(Path(orig).parent / video_name)
-    return next((c for c in candidates if c.exists()), None)
+resolve_source = _catalog.resolve_source
 
 
 def precut_name(fragment: int, video_name: str) -> str:

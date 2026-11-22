@@ -168,6 +168,14 @@ of at least 40 words, so this short sample becomes one fragment.
   and the contact sheet in section 5 are for.
 - **Without Ollama,** there are no picture queries; "My videos" lists keyword
   matches by video, without a moment.
+- **With a `shots.json` in the project,** its queries are used for the
+  fragments it covers and Ollama is asked only for the rest. This is the
+  better path: 2–4 short descriptions of the picture per fragment, written
+  before searching (by you or by an assistant), find more than generated ones.
+  A `game` field (for the file, a fragment or one query) searches only that
+  game's catalog. Fragment numbers must match the storyboard's split — the
+  sample's file numbers its four paragraphs, so run it with `--min-words 1`;
+  `report` refuses a file numbered for another split.
 
 The `Search query` line is the keyword query used for YouTube and the keyword
 fallback — a bag of the fragment's proper nouns, not a sentence.
@@ -337,6 +345,20 @@ In Vegas Pro 22:
 
 All times in `layout.txt` are relative to the start of the narration, so the
 clips follow the mp3 wherever it sits on the timeline.
+
+**DaVinci Resolve instead of Vegas** (needs `pip install -e ".[resolve]"`):
+
+```bash
+python -m clipmaker.resolve_export <project>
+```
+
+It writes `resolve/<name>.otio` and `resolve/<name>.fcpxml` from the same
+`layout.txt` (plus `overlays/layout.txt` if the project has one): V1 B-roll,
+V2 overlays, A1 the narration from 0. In Resolve: File → Import → Timeline,
+pick either file. Fades are written as dissolves in the OTIO file and as
+opacity keyframes in the FCPXML; source frame rates come from `ffprobe`.
+Media is linked by absolute path, so export on the machine that has the
+footage.
 
 ## 6. When the narration is re-recorded
 

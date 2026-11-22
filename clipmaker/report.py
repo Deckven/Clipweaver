@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config, embed_index, image_search, shot_query
+from . import catalog as _catalog
 from .youtube_search import (
     split_into_paragraphs,
     extract_search_query,
@@ -35,22 +36,8 @@ def _as_games(game: str | list[str] | None) -> list[str]:
 
 
 def _load_catalog(game: str | list[str] | None) -> list[dict]:
-    entries = []
-    for key in _as_games(game):
-        game_cfg = config.GAMES.get(key)
-        if not game_cfg:
-            continue
-        cat_dir = config.CATALOG_DIR / game_cfg["catalog_subdir"]
-        if not cat_dir.exists():
-            continue
-        for p in cat_dir.rglob("*.json"):
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                data["_catalog_path"] = str(p.relative_to(config.CATALOG_DIR))
-                entries.append(data)
-            except (json.JSONDecodeError, OSError):
-                continue
-    return entries
+    games = _as_games(game)
+    return _catalog.load_entries(games) if games else []
 
 
 def _tokenize(text: str) -> set[str]:
@@ -114,9 +101,10 @@ def _best_hits_across_queries(
     per_query: list[list[embed_index.Hit]] = []
     for query in queries:
         merged: dict[str, embed_index.Hit] = {}
-        for game in (games or [None]):
+        # A written query that names its game searches that catalog only.
+        for game in ([query.game] if query.game else (games or [None])):
             for hit in embed_index.search(query.text, k=max_results, game=game):
-                tagged = replace(hit, query=query.text if query.source == "llm" else "")
+                tagged = replace(hit, query=query.text if query.source != "fragment" else "")
                 current = merged.get(hit.catalog_path)
                 if current is None or tagged.score > current.score:
                     merged[hit.catalog_path] = tagged
@@ -389,8 +377,12 @@ def generate_report(
     min_words: int = 40,
     query_overrides: dict[int, str] | None = None,
     images_per_source: int = 0,
+    written_shots: dict[int, list[shot_query.ShotQuery]] | None = None,
 ) -> tuple[str, dict]:
     """Returns the storyboard markdown and the machine-readable moments data.
+
+    ``written_shots`` (from the project's shots.json) are the picture queries
+    for their fragments; only fragments without one ask Ollama.
 
     The moments mirror the "My videos" sections: for every fragment, the
     scored candidates with their timecodes. build_storyboard consumes this
@@ -402,6 +394,15 @@ def generate_report(
         return "No fragments found in text.", {"fragments": []}
 
     query_overrides = query_overrides or {}
+    written_shots = written_shots or {}
+    beyond = sorted(n for n in written_shots if n > len(fragments))
+    if beyond:
+        # Numbered against another split of the text: every query would land on
+        # the wrong paragraph, so refuse instead of searching with them.
+        raise ValueError(
+            f"shots.json numbers fragments up to {max(beyond)}, but with min_words={min_words} "
+            f"the text splits into {len(fragments)}. Use the split the queries were written "
+            f"for (--min-words 1 gives one fragment per paragraph).")
 
     games = _as_games(game)
     catalog = _load_catalog(games) if games else []
@@ -440,13 +441,16 @@ def generate_report(
         if catalog:
             # Built once and handed to the search below, so the queries printed
             # here are provably the ones that produced the hits.
-            shots = shot_query.build_shot_queries(
-                fragment, game=games[0] if games else None
-            )
-            if shots and shots[0].source == "llm":
-                lines.append(
-                    "**Shot queries:** " + " · ".join(f"`{s.text}`" for s in shots)
+            if i in written_shots:
+                shots = written_shots[i]
+            else:
+                shots = shot_query.build_shot_queries(
+                    fragment, game=games[0] if games else None
                 )
+            if shots and shots[0].source in ("llm", "written"):
+                label = ("**Shot queries (shots.json):** " if shots[0].source == "written"
+                         else "**Shot queries:** ")
+                lines.append(label + " · ".join(f"`{s.text}`" for s in shots))
             elif not shots:
                 lines.append("**Shot queries:** *none — nothing filmable in this fragment*")
             lines.append("")
@@ -581,6 +585,9 @@ if __name__ == "__main__":
     ap.add_argument("project", nargs="?", help="project folder under projects/ (omit to list projects)")
     ap.add_argument("game", nargs="?", help="game key from GAMES, several as \"a,b\" "
                     "(default: detected from the project path)")
+    ap.add_argument("--min-words", type=int, default=40, metavar="N",
+                    help="merge paragraphs shorter than N words into the next fragment "
+                         "(default 40; 1 = one fragment per paragraph)")
     ap.add_argument("--images", type=int, nargs="?", const=3, default=0, metavar="N",
                     help="also N still images per source (Fandom wiki, Wikimedia Commons); default N=3")
     args = ap.parse_args()
@@ -608,10 +615,21 @@ if __name__ == "__main__":
     overrides = load_query_overrides(project)
     if overrides:
         print(f"Query overrides: {len(overrides)} fragments (queries.json)")
+    try:
+        written = shot_query.load_written_shots(config.project_path(project) / "shots.json")
+    except ValueError as exc:
+        sys.exit(f"[Storyboard] {exc}")
+    if written:
+        print(f"Picture queries: shots.json for {len(written)} fragments; Ollama for the rest")
 
-    report, moments = generate_report(text, project, game=game,
-                                      query_overrides=overrides,
-                                      images_per_source=images)
+    try:
+        report, moments = generate_report(text, project, game=game,
+                                          min_words=args.min_words,
+                                          query_overrides=overrides,
+                                          written_shots=written,
+                                          images_per_source=images)
+    except ValueError as exc:
+        sys.exit(f"[Storyboard] {exc}")
     path = save_report(report, project, moments=moments)
     print(f"Storyboard saved: {path}")
     if moments["fragments"]:

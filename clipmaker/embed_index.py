@@ -12,10 +12,12 @@ Three document levels, because catalog coverage is uneven:
   scene   scenes[].description. Clean prose written by the VLM, carries
           start/end. Only present for videos indexed at interval <= 10s
           (27 of 309 files at the time of writing).
-  window  timeline[] captions merged EMBED_WINDOW_FRAMES at a time. OCR-heavy
-          and noisy, but it is the only per-time signal the other 282 files
-          have. Built *only* when a video has no scenes, so scene-covered
-          videos are never diluted with OCR garbage.
+  window  timeline[] captions (the OCR read off each frame) merged
+          EMBED_WINDOW_FRAMES at a time. Noisy, but the only per-time signal
+          videos without scenes have. A video with scenes gets only the
+          windows whose OCR reads like speech — cutscene subtitles, where the
+          character names are that scene descriptions leave out; HUD and menu
+          fragments stay out so they never dilute the scenes.
 
 Storage is a single .npz of float32 vectors plus a parallel docs.json. At
 catalog scale (~4k documents) brute-force cosine is sub-10 ms, so there is no
@@ -170,6 +172,13 @@ def _video_text(entry: dict) -> str:
 
 
 def _scene_documents(entry: dict, base: dict) -> list[Document]:
+    # Scenes indexed in chunks before the 2026-07-30 parser fix carry timecodes
+    # squeezed into the first minute of each chunk: a search would point at the
+    # wrong moment. Leave them out; the caller falls back to timeline windows,
+    # whose timecodes come from frame positions and are right. Re-running the
+    # analyzer writes a fresh record without the flag.
+    if entry.get("scene_timecodes_unreliable"):
+        return []
     docs = []
     title = entry.get("title", "")
     for i, scene in enumerate(entry.get("scenes") or []):
@@ -226,7 +235,24 @@ def _group_timeline(timeline: list[dict]) -> list[list[dict]]:
     return groups
 
 
-def _window_documents(entry: dict, base: dict) -> list[Document]:
+# Bump when iter_documents builds documents differently: an index built under
+# other rules is rebuilt in full, since the catalog files themselves did not
+# change and the incremental build would otherwise keep the old documents.
+# 2: speech windows for videos with scenes (2026-11-22).
+DOC_RULES = 2
+
+# A window counts as speech when its OCR has at least this many lowercase words
+# of 3+ letters: subtitles are sentences ("You're not aiming high enough"),
+# HUD and menus are capitalised labels ("FOLLOW; Green; Follow").
+SPEECH_MIN_WORDS = 6
+
+
+def looks_like_speech(text: str) -> bool:
+    words = re.findall(r"[^\W\d_]{3,}", text)
+    return sum(1 for w in words if w[0].islower()) >= SPEECH_MIN_WORDS
+
+
+def _window_documents(entry: dict, base: dict, speech_only: bool = False) -> list[Document]:
     timeline = entry.get("timeline") or []
     if not timeline:
         return []
@@ -234,6 +260,8 @@ def _window_documents(entry: dict, base: dict) -> list[Document]:
     docs = []
     for i, chunk in enumerate(_group_timeline(timeline)):
         captions = [clean_caption(f.get("caption", "")) for f in chunk]
+        if speech_only and not looks_like_speech(" ".join(captions)):
+            continue
         tags = {t for f in chunk for t in (f.get("tags") or [])}
         body = ", ".join(c for c in captions if c)
         if tags:
@@ -278,9 +306,9 @@ def iter_documents(entry: dict, catalog_path: str) -> list[Document]:
 
     scene_docs = _scene_documents(entry, base)
     docs.extend(scene_docs)
-    # Windows only where scenes are missing — see module docstring.
-    if not scene_docs:
-        docs.extend(_window_documents(entry, base))
+    # Every window where scenes are missing; with scenes, only the speech
+    # windows (subtitles) — see the module docstring.
+    docs.extend(_window_documents(entry, base, speech_only=bool(scene_docs)))
     return docs
 
 
@@ -397,6 +425,7 @@ def _save_index(index: Index) -> None:
         json.dumps({
             "model": config.EMBED_MODEL,
             "window_frames": config.EMBED_WINDOW_FRAMES,
+            "doc_rules": DOC_RULES,
             "files": index.manifest,
         }, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -469,6 +498,13 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
     if previous and previous.manifest.get("model") != config.EMBED_MODEL:
         force = True  # vectors from another model are not comparable
         prev_manifest = {}
+    rebuild_docs = bool(previous) and (
+        previous.manifest.get("doc_rules", 1) != DOC_RULES
+        or previous.manifest.get("window_frames") != config.EMBED_WINDOW_FRAMES)
+    if rebuild_docs and game is not None:
+        raise ValueError("the index was built under other document rules (DOC_RULES or "
+                         "EMBED_WINDOW_FRAMES changed); run a full build without --game. "
+                         "The index was left as it is.")
 
     fingerprints = {}
     stale: list[Path] = []
@@ -479,7 +515,7 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
         except OSError:
             continue
         fingerprints[rel] = fp
-        if force or prev_manifest.get(rel) != fp:
+        if force or rebuild_docs or prev_manifest.get(rel) != fp:
             stale.append(path)
 
     # A partial (per-game) build must not drop documents of other games.
