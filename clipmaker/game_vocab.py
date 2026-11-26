@@ -306,6 +306,7 @@ DIABLO = {
 
 
 def vocab_for(game: str) -> dict | None:
+    """The entity vocabulary of a game key, or None for a game without one."""
     return {
         "elden_ring": ELDEN_RING,
         "eve_online": EVE_ONLINE,

@@ -1,6 +1,7 @@
 """clipmaker.config — machine-specific paths and keys come from .env / the environment."""
 import importlib
 import os
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,8 @@ def reload_config(monkeypatch, tmp_path):
     """Reload config under a patched environment; restore the real one after."""
     def _reload(**env):
         for key in ("CLIPMAKER_RAW_FOOTAGE_DIR", "CLIPMAKER_EDIT_PROJECTS_DIR",
-                    "CLIPMAKER_CATALOG_DIR", "CLIPMAKER_PROJECTS_DIR", "PEXELS_API_KEY"):
+                    "CLIPMAKER_CATALOG_DIR", "CLIPMAKER_PROJECTS_DIR", "PEXELS_API_KEY",
+                    "CLIPMAKER_HOME"):
             monkeypatch.delenv(key, raising=False)
         for key, value in env.items():
             monkeypatch.setenv(key, value)
@@ -64,6 +66,40 @@ def test_utf16_dotenv_fails_with_a_clear_message(tmp_path):
 def test_relative_env_path_is_taken_from_the_repo_root(reload_config):
     cfg = reload_config(CLIPMAKER_CATALOG_DIR="examples/sample/catalog")
     assert cfg.CATALOG_DIR == cfg.ROOT_DIR / "examples" / "sample" / "catalog"
+
+
+def test_data_root_follows_where_the_package_runs(reload_config):
+    cfg = reload_config()
+    if (cfg.PACKAGE_DIR.parent / "pyproject.toml").is_file():  # a checkout / pip install -e
+        assert cfg.ROOT_DIR == cfg.PACKAGE_DIR.parent
+    else:  # pip install .: never site-packages
+        assert cfg.ROOT_DIR == Path.cwd().resolve()
+
+
+def test_clipmaker_home_wins(reload_config, tmp_path):
+    cfg = reload_config(CLIPMAKER_HOME=str(tmp_path))
+    assert cfg.ROOT_DIR == tmp_path.resolve()
+    assert cfg.CATALOG_DIR == tmp_path.resolve() / "catalog"
+
+
+def test_an_installed_package_uses_the_current_folder(monkeypatch, tmp_path):
+    # A regular `pip install .`: no pyproject.toml next to the package.
+    monkeypatch.delenv("CLIPMAKER_HOME", raising=False)
+    monkeypatch.setattr(config, "PACKAGE_DIR", tmp_path / "site-packages" / "clipmaker")
+    monkeypatch.chdir(tmp_path)
+    assert config._data_root() == tmp_path.resolve()
+
+
+def test_games_file_in_the_data_folder_is_found(reload_config, tmp_path):
+    (tmp_path / "games_local.py").write_text(
+        "DEFAULT_GAME = 'mine'\n"
+        "def games(raw, edit):\n"
+        "    return {'mine': {'video_dirs': [raw / 'Mine'], 'catalog_subdir': 'mine_videos'}}\n",
+        encoding="utf-8")
+    cfg = reload_config(CLIPMAKER_HOME=str(tmp_path))
+    if (cfg.PACKAGE_DIR / "games_local.py").is_file():
+        pytest.skip("this checkout has its own clipmaker/games_local.py, which comes first")
+    assert cfg.DEFAULT_GAME == "mine" and "mine" in cfg.GAMES
 
 
 def test_defaults_stay_inside_the_repo(reload_config):

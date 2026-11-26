@@ -3,11 +3,17 @@ Search YouTube videos by text query using yt-dlp.
 Supports both single queries and large text blocks (split into fragments).
 """
 
+import argparse
 import importlib.util
 import json
+import logging
 import re
 import subprocess
 import sys
+
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 
 # Russian and English stop words for query extraction
@@ -55,14 +61,17 @@ def search_youtube(query: str, max_results: int = 10) -> list[dict]:
         )
     except FileNotFoundError:
         if not _missing_warned:
-            print('[yt-dlp] not installed, YouTube search skipped (pip install -e ".[youtube]")')
+            log.warning('[yt-dlp] not installed, YouTube search skipped (pip install -e ".[youtube]")')
             _missing_warned = True
         return []
     except subprocess.TimeoutExpired:
-        print(f"[yt-dlp] Timeout for query: {ascii(query)}")
+        log.warning("[yt-dlp] Timeout for query: %s", ascii(query))
         return []
 
     if result.returncode != 0:
+        tail = (result.stderr or "").strip().splitlines()[-1:] or ["no stderr"]
+        log.warning("[yt-dlp] search failed (exit %d) for %s: %s",
+                    result.returncode, ascii(query), tail[0])
         return []
 
     videos = []
@@ -71,7 +80,8 @@ def search_youtube(query: str, max_results: int = 10) -> list[dict]:
             continue
         try:
             data = json.loads(line)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
+            log.debug("[yt-dlp] skipped a line that is not JSON: %s", exc)
             continue
 
         duration_sec = data.get("duration") or 0
@@ -234,15 +244,16 @@ def search_youtube_for_text(
     return storyboard
 
 
-if __name__ == "__main__":
-    import argparse
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: search YouTube by words, print the hits."""
     ap = argparse.ArgumentParser(description="Search YouTube by text query (yt-dlp, nothing is downloaded)")
     ap.add_argument("query", nargs="+", help="search words")
     ap.add_argument("-n", "--max-results", type=int, default=10)
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
     query = " ".join(args.query)
-    print(f"Searching YouTube for: {query}\n")
+    log.info("Searching YouTube for: %s", query)
 
     results = search_youtube(query, max_results=args.max_results)
     for i, v in enumerate(results, 1):
@@ -250,3 +261,7 @@ if __name__ == "__main__":
         print(f"{i:3d}. [{v['duration']}] {v['title']}")
         print(f"     {v['channel']} | {views} views | {v['url']}")
         print()
+
+
+if __name__ == "__main__":
+    main()

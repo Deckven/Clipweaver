@@ -1,4 +1,5 @@
-# Full dependency list — mirrors pyproject.toml ([all] + [test]).
+# Generated from pyproject.toml by tools/requirements_txt.py - edit pyproject.toml,
+# then re-run the script. Everything: core + every extra in [all] + [test].
 # Install torch from the PyTorch index that matches your CUDA first, e.g.
 #   pip install torch --index-url https://download.pytorch.org/whl/cu128
 # System tools, not pip packages: ffmpeg/ffprobe on PATH; Ollama for shot
@@ -29,6 +30,9 @@ faster-whisper>=1.0
 
 # youtube
 yt-dlp>=2024.1
+
+# resolve
+opentimelineio>=0.17
 
 # test
 pytest>=8

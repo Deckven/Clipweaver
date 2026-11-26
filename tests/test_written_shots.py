@@ -1,6 +1,7 @@
 """shots.json: picture queries written before searching replace Ollama for their
 fragments; the game named in the file narrows the search to that catalog."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -39,7 +40,7 @@ def test_list_shape_as_in_the_sample(tmp_path, games):
 
 
 def test_the_repository_sample_loads():
-    assert set(load_written_shots(config.ROOT_DIR / "examples" / "sample" / "shots.json")) == {1, 2, 3, 4}
+    assert set(load_written_shots(Path(__file__).resolve().parent.parent / "examples" / "sample" / "shots.json")) == {1, 2, 3, 4}
 
 
 @pytest.mark.parametrize("data, match", [

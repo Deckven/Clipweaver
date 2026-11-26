@@ -31,6 +31,7 @@ CLI (run from the repo root; see eval/README section in the review sheet):
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
 import unicodedata
@@ -39,7 +40,9 @@ from pathlib import Path
 from typing import Protocol
 
 from . import config
-from .embed_index import clean_caption, parse_timestamp
+from .catalog_docs import clean_caption, parse_timestamp
+
+log = logging.getLogger(__name__)
 
 EVAL_DIR = config.ROOT_DIR / "eval"
 GOLD_PATH = EVAL_DIR / "retrieval_gold.yaml"
@@ -91,6 +94,7 @@ class Pick:
 
 
 class Layer(Protocol):
+    """A search layer under evaluation: query in, ranked moments out."""
     def search(self, query: str, n: int) -> list[Moment]: ...
 
 
@@ -105,6 +109,7 @@ def _moment_end(m: Moment) -> float:
 
 
 def overlaps(m: Moment, pick: Pick, tol: float = TOLERANCE_SEC) -> bool:
+    """True if a found moment is in the picked video and within tol of its range."""
     if m.start is None or name_key(m.name) != name_key(pick.name):
         return False
     return m.start <= pick.end + tol and _moment_end(m) >= pick.start - tol
@@ -133,11 +138,13 @@ def file_rank(moments: list[Moment], pick: Pick) -> int | None:
 
 
 def best_rank(ranks: list[int | None]) -> int | None:
+    """The best (lowest) rank among the queries, or None if none found the pick."""
     found = [r for r in ranks if r is not None]
     return min(found) if found else None
 
 
 def recall_at_k(ranks: list[int | None], k: int) -> float:
+    """Share of items found at rank k or better."""
     if not ranks:
         return 0.0
     return sum(1 for r in ranks if r is not None and r <= k) / len(ranks)
@@ -195,6 +202,7 @@ class Bm25Layer:
         return len(self._moments)
 
     def search(self, query: str, n: int) -> list[Moment]:
+        """Moments ranked by BM25 over the layer's documents."""
         scores: dict[int, float] = {}
         k1, b, avgdl = self._k1, self._b, self._avgdl or 1.0
         for tok in set(tokenize(query)):
@@ -218,7 +226,8 @@ def load_entries(catalog_dir: Path, game: str) -> list[dict]:
     for path in sorted(root.rglob("*.json")):
         try:
             entry = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, ValueError) as exc:
+            log.warning("skipped unreadable catalog file %s: %s", path, exc)
             continue
         if isinstance(entry, dict) and entry.get("original_name"):
             entries.append(entry)
@@ -226,6 +235,7 @@ def load_entries(catalog_dir: Path, game: str) -> list[dict]:
 
 
 def ocr_layer(entries: list[dict]) -> Bm25Layer:
+    """BM25 layer over the OCR timeline captions of the entries."""
     docs = []
     for entry in entries:
         for frame in entry.get("timeline") or []:
@@ -239,6 +249,7 @@ def ocr_layer(entries: list[dict]) -> Bm25Layer:
 
 
 def scenes_layer(entries: list[dict]) -> Bm25Layer:
+    """BM25 layer over the VLM scene descriptions of the entries."""
     docs = []
     for entry in entries:
         for scene in entry.get("scenes") or []:
@@ -271,6 +282,7 @@ class SemanticLayer:
         self.uncut = uncut
 
     def search(self, query: str, n: int) -> list[Moment]:
+        """Moments from the semantic index, optionally without the z-score cut."""
         from . import embed_index
 
         floor = config.EMBED_MIN_COSINE
@@ -296,6 +308,7 @@ def item_picks(item: dict) -> list[Pick]:
 
 
 def evaluable(item: dict) -> bool:
+    """True for an item with queries and picks that the owner did not mark wrong."""
     return item.get("status") != "wrong" and bool(item_picks(item)) and bool(item.get("queries"))
 
 

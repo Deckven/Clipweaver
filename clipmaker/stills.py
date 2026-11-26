@@ -37,6 +37,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 from clipmaker.image_search import USER_AGENT
 
+from .log import add_verbose_flag, setup_logging
+
+
 DEFAULT_WIDTH = 1920
 SHEET_TILE_WIDTH = 640
 IMAGE_TILE_WIDTH = 480
@@ -92,6 +95,7 @@ def fmt_time(seconds: float) -> str:
 
 
 def is_remote(src: str | Path) -> bool:
+    """True for an http(s) URL rather than a local file."""
     return isinstance(src, str) and src.startswith(("http://", "https://"))
 
 
@@ -221,6 +225,7 @@ def probe(media: str) -> tuple[int, int, float]:
 
 
 def detect_crop(media: str, at_sec: float) -> tuple[int, int, int, int] | None:
+    """Letterbox crop (w, h, x, y) found by ffmpeg cropdetect around at_sec, or None."""
     width, height, _ = probe(media)
     result = _run(["ffmpeg", "-hide_banner", "-ss", f"{max(at_sec - 1, 0):.3f}", *_input_args(media),
                    "-t", "2", "-vf", "cropdetect=limit=24:round=2:reset=0", "-f", "null", "-"],
@@ -260,7 +265,7 @@ def grab(src: str, at_sec: float, out: Path, width: int = DEFAULT_WIDTH,
 # Contact sheets
 # ---------------------------------------------------------------------------
 
-def _font(size: int) -> ImageFont.ImageFont:
+def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     for candidate in _FONT_CANDIDATES:
         try:
             return ImageFont.truetype(candidate, size)
@@ -286,7 +291,7 @@ def _compose(images: list[Image.Image | None], labels: list[str], out: Path,
     sheet = Image.new("RGB", (columns * tile_width, rows * (cell_h + LABEL_HEIGHT)), "black")
     draw = ImageDraw.Draw(sheet)
     font = _font(LABEL_HEIGHT - 8)
-    for i, (image, label) in enumerate(zip(images, labels)):
+    for i, (image, label) in enumerate(zip(images, labels, strict=True)):
         x = (i % columns) * tile_width
         y = (i // columns) * (cell_h + LABEL_HEIGHT)
         if image is None:
@@ -333,7 +338,7 @@ def video_sheet(src: str, times: list[float], out: Path, cols: int = 3,
             tiles.append({"index": index, "time": at, "label": label, "ok": image is not None})
     if not any(t["ok"] for t in tiles):
         raise RuntimeError(f"no frames extracted from {src}: {last_error}")
-    _compose(images, [t["label"] for t in tiles], Path(out), cols, tile_width)
+    _compose(images, [str(t["label"]) for t in tiles], Path(out), cols, tile_width)
     return tiles
 
 
@@ -357,7 +362,7 @@ def image_sheet(paths: list[Path], out: Path, cols: int = 4,
         images.append(image)
         tiles.append({"index": index, "path": path, "label": f"{index} · {path.name}",
                       "ok": image is not None})
-    _compose(images, [t["label"] for t in tiles], Path(out), cols, tile_width)
+    _compose(images, [str(t["label"]) for t in tiles], Path(out), cols, tile_width)
     return tiles
 
 
@@ -436,6 +441,7 @@ def _cmd_fetch(args) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: grab a still, build a contact sheet, or fetch images."""
     parser = argparse.ArgumentParser(prog="clipmaker.stills", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -472,7 +478,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", required=True)
     p.set_defaults(func=_cmd_fetch)
 
+    add_verbose_flag(parser)
     args = parser.parse_args(argv)
+    setup_logging(args.verbose)
     # Windows consoles default to cp1251/cp866: tile labels and Cyrillic paths
     # would print as '?'.
     if hasattr(sys.stdout, "reconfigure"):

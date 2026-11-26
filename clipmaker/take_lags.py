@@ -32,6 +32,9 @@ from pathlib import Path
 
 import numpy as np
 
+from .log import add_verbose_flag, setup_logging
+
+
 SR = 16000
 HOP = 160              # 10 ms envelope frames
 FRAMES_PER_SEC = SR // HOP
@@ -51,6 +54,7 @@ def decode_audio(path: str | Path, sr: int = SR) -> np.ndarray:
 
 
 def envelope(x: np.ndarray) -> np.ndarray:
+    """Log RMS loudness per HOP samples: what the takes are cross-correlated on."""
     n = len(x) // HOP
     fr = x[: n * HOP].reshape(n, HOP)
     return np.log(np.sqrt((fr ** 2).mean(axis=1)) + 1e-4)
@@ -135,6 +139,7 @@ def expand_paths(items: list[str]) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: measure where each raw take sits inside the merged narration."""
     ap = argparse.ArgumentParser(prog="clipmaker.take_lags", description=__doc__.split("\n")[0])
     ap.add_argument("mix", help="the merged narration the timings were aligned to")
     ap.add_argument("takes", nargs="+", help="raw takes (globs allowed)")
@@ -143,7 +148,9 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--min-score", type=float, default=MIN_SCORE)
     ap.add_argument("--json", type=Path, default=None,
                     help="also write the segments as a vegas.json-style takes list")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
     if args.window <= 0 or args.step <= 0:
         ap.error("--window and --step must be positive")
 

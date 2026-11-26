@@ -168,8 +168,7 @@ run `vegas_scripts/import_layout.cs` and pick the layout.txt.
 ## Module Map
 
 ```
-storyboard.py        → split text into fragments
-report.py            → catalog + YouTube search → storyboard.md + moments.json
+report.py            → split text into fragments, catalog + YouTube search → storyboard.md + moments.json
 align.py             → align fragments to audio → timings_v1.json
 build_storyboard.py  → curation.json + moments.json + timings_v1 → timings.json
 clip_extractor.py    → cut exact ranges from timings → clips/

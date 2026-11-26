@@ -15,13 +15,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from collections.abc import Iterator
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 CAPTION_PREVIEW = 150
 DEFAULT_PER_FILE = 4
@@ -29,6 +33,7 @@ DEFAULT_PER_FILE = 4
 
 @dataclass(frozen=True)
 class Match:
+    """One video whose OCR or scene text matched, with the timecodes of the hits."""
     name: str
     duration_sec: float | None
     stamps: tuple[str, ...]
@@ -36,6 +41,7 @@ class Match:
 
 
 def catalog_dir(game: str) -> Path:
+    """The game's catalog folder; ValueError for an unknown game."""
     game_cfg = config.GAMES.get(game)
     if not game_cfg:
         raise ValueError(f"unknown game {game!r}; known: {', '.join(config.GAMES)}")
@@ -43,12 +49,14 @@ def catalog_dir(game: str) -> Path:
 
 
 def iter_entries(cat_dir: Path) -> Iterator[dict]:
-    """Catalog entries in path order. Unreadable or non-object JSON is skipped:
-    the catalog holds sidecar files (embeddings, debug dumps) that are not entries."""
+    """Catalog entries in path order. Non-object JSON is skipped quietly: the
+    catalog holds sidecar files (embeddings, debug dumps) that are not entries.
+    A file that cannot be read at all is skipped with a warning."""
     for path in sorted(cat_dir.rglob("*.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            log.warning("skipped unreadable catalog file %s: %s", path, exc)
             continue
         if isinstance(data, dict):
             yield data
@@ -72,6 +80,7 @@ def entry_hits(entry: dict, pattern: re.Pattern) -> list[dict]:
 
 def search(cat_dir: Path, pattern: re.Pattern,
            name_filter: str | None = None) -> list[Match]:
+    """Videos whose OCR or scene text matches the pattern, in catalog order."""
     needle = (name_filter or "").lower()
     matches = []
     for entry in iter_entries(cat_dir):
@@ -89,12 +98,14 @@ def search(cat_dir: Path, pattern: re.Pattern,
 
 
 def format_match(m: Match, per_file: int) -> str:
+    """One result as two lines: name, duration and timecodes, then a preview."""
     shown = ", ".join(m.stamps[:per_file])
     more = f" (+{len(m.stamps) - per_file})" if len(m.stamps) > per_file else ""
     return f"{m.name} [{m.duration_sec}s] @ {shown}{more}\n    {m.preview}"
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: regex over the OCR and scene text of a game's catalog."""
     ap = argparse.ArgumentParser(prog="clipmaker.ocrgrep",
                                  description=__doc__.split("\n")[0])
     ap.add_argument("regex", help="case-insensitive regular expression")
@@ -103,7 +114,9 @@ def main(argv: list[str] | None = None) -> None:
                     help="timecodes shown per video (default %(default)s)")
     ap.add_argument("--file", default=None,
                     help="only videos whose name contains this substring")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
     if args.per_file <= 0:
         ap.error("--per-file must be positive")
     try:

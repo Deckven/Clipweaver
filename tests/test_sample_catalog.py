@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from clipmaker import config, embed_index, ocrgrep, storyboard
+from clipmaker import config, embed_index, ocrgrep
+from clipmaker.youtube_search import split_into_paragraphs
 
 SAMPLE = Path(__file__).resolve().parent.parent / "examples" / "sample"
 CATALOG = SAMPLE / "catalog" / config.GAMES["assassins_creed_4"]["catalog_subdir"]
@@ -54,4 +55,5 @@ def test_shots_cover_every_narration_paragraph_and_name_a_sample_clip():
     names = {load(p)["original_name"] for p in ENTRIES}
     assert {s["expected"] for s in shots} == names
     assert all(s["shots"] for s in shots)
-    assert all(storyboard.split_into_fragments(p) for p in paragraphs)
+    # report --min-words 1 must see the same fragments shots.json is numbered for
+    assert len(split_into_paragraphs(narration, min_words=1)) == len(paragraphs)

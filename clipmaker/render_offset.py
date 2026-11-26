@@ -17,8 +17,10 @@ import sys
 
 import numpy as np
 
+from .log import add_verbose_flag, setup_logging
 from .stills import parse_time
 from .take_lags import decode_audio, ncc
+
 
 SR = 8000
 WIN_S = 4.0
@@ -54,12 +56,15 @@ def offset_at(narration: np.ndarray, render: np.ndarray, t: float, sr: int = SR,
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: how far a render's soundtrack is shifted against the narration mp3."""
     ap = argparse.ArgumentParser(prog="clipmaker.render_offset", description=__doc__.split("\n")[0])
     ap.add_argument("narration")
     ap.add_argument("render")
     ap.add_argument("--at", nargs="+", help="probe times (default: spread over the narration)")
     ap.add_argument("--count", type=int, default=DEFAULT_COUNT)
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     try:
         nar = decode_audio(args.narration, SR)

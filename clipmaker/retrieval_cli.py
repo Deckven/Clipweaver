@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,9 @@ from pathlib import Path
 from . import config
 from . import retrieval_eval as rev
 from . import retrieval_gold as rg
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 DIAGNOSTIC = "semantic_nocut"   # semantic without z and cosine floors — what the floors cost
 
@@ -69,8 +73,8 @@ def _layers_for(game: str, catalog_dir: Path, semantic: bool) -> dict:
     if semantic:
         layers["semantic"] = rev.SemanticLayer(game)
         layers[DIAGNOSTIC] = rev.SemanticLayer(game, uncut=True)
-    print(f"[run] {game}: {len(entries)} videos, ocr docs {len(layers['ocr'])}, "
-          f"scene docs {len(layers['scenes'])}")
+    log.info("[run] %s: %d videos, ocr docs %d, scene docs %d",
+             game, len(entries), len(layers["ocr"]), len(layers["scenes"]))
     return layers
 
 
@@ -91,7 +95,8 @@ def _cmd_run(args) -> None:
         if embed_index.load_index() is None:
             raise SystemExit(f"No semantic index in {config.EMBED_INDEX_DIR} — pass --index-dir "
                              "or --no-semantic; an empty index would read as 0% recall.")
-    rows, freshness = [], {}
+    rows: list[dict] = []
+    freshness: dict[str, dict[str, int]] = {}
     for game in dict.fromkeys(it["game"] for it in items):
         layers = _layers_for(game, catalog_dir, semantic)
         if semantic:
@@ -100,7 +105,7 @@ def _cmd_run(args) -> None:
                      "ranks": rev.evaluate_item(it, layers, tol=args.tolerance)}
                     for it in items if it["game"] == game)
     if semantic and rows and all(r["ranks"]["semantic"]["file"] is None for r in rows):
-        print("[run] WARNING: the semantic layer found no pick file for any query — check the index")
+        log.warning("[run] the semantic layer found no pick file for any query - check the index")
     main_layers = rev.LAYERS if semantic else ("ocr", "scenes")
     results = {
         "run_at": datetime.now().isoformat(timespec="seconds"),
@@ -140,6 +145,7 @@ def _pct(x: float) -> str:
 
 
 def render_report(gold: dict, results: dict) -> str:
+    """retrieval_report.md: recall@k per layer, per video and in total."""
     titles = {v["id"]: v["title"] for v in gold["videos"]}
     sources = {v["id"]: v["query_source"] for v in gold["videos"]}
     reviewed = sum(it.get("status") in ("ok", "wrong") for it in gold["items"])
@@ -210,7 +216,8 @@ def _cmd_apply(args) -> None:
     print(f"[apply-review] {counts} -> {args.gold}")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """CLI: build the gold set, run the eval, write and apply the review sheet."""
     p = argparse.ArgumentParser(prog="python -m clipmaker.retrieval_eval",
                                 description="Recall@k of catalog search layers against a gold set")
     p.add_argument("--gold", default=str(rev.GOLD_PATH))
@@ -237,7 +244,9 @@ def main() -> None:
     a = sub.add_parser("apply-review", help="carry the sheet's marks into the gold YAML")
     a.add_argument("sheet", nargs="?", default=str(rev.SHEET_PATH))
 
-    args = p.parse_args()
+    add_verbose_flag(p)
+    args = p.parse_args(argv)
+    setup_logging(args.verbose)
     {"gold": _cmd_gold, "run": _cmd_run, "sheet": _cmd_sheet, "apply-review": _cmd_apply}[args.command](args)
 
 

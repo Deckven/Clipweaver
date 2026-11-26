@@ -5,6 +5,12 @@ __pycache__/
 .env.*
 !.env.example
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# pip install . (non-editable) builds here
+build/
+dist/
+*.egg-info/
 
 # Claude Code: only the skills are shared
 .claude/*

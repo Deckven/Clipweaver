@@ -11,21 +11,28 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from pathlib import Path
 
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
+
 
 def parse_timestamp(ts: str) -> float:
+    """Seconds from HH:MM:SS, MM:SS or plain seconds; the seconds may carry a fraction."""
     parts = ts.strip().split(":")
     if len(parts) == 3:
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
     if len(parts) == 2:
-        return int(parts[0]) * 60 + int(parts[1])
+        return int(parts[0]) * 60 + float(parts[1])
     return float(parts[0])
 
 
 def extract_sections(md_text: str) -> list[dict]:
+    """Headed sections with their time ranges from a structured transcript."""
     heading_re = re.compile(
         r"^(#{2,3})\s+(.+?)(?:\s+\[(\d{2}:\d{2}:\d{2})\])?\s*$",
         re.MULTILINE,
@@ -91,6 +98,7 @@ def extract_sections(md_text: str) -> list[dict]:
 
 
 def find_catalog_json(structured_path: Path) -> dict | None:
+    """The catalog entry stored next to a structured transcript, if any."""
     stem = structured_path.stem.removesuffix("_structured")
     catalog_json = structured_path.parent / f"{stem}.json"
     if catalog_json.exists():
@@ -100,16 +108,18 @@ def find_catalog_json(structured_path: Path) -> dict | None:
 
 
 def run(structured_path: Path, video_override: str | None = None) -> Path:
+    """Write <stem>_vegas_sections.json next to a structured transcript; returns its path.
+
+    FileNotFoundError for a missing input, ValueError when it has no timestamped sections.
+    """
     if not structured_path.exists():
-        print(f"File not found: {structured_path}")
-        sys.exit(1)
+        raise FileNotFoundError(f"File not found: {structured_path}")
 
     md_text = structured_path.read_text(encoding="utf-8")
     sections = extract_sections(md_text)
 
     if not sections:
-        print("No sections with timestamps found.")
-        sys.exit(1)
+        raise ValueError(f"No sections with timestamps found in {structured_path}")
 
     video_path = video_override
     if not video_path:
@@ -128,25 +138,32 @@ def run(structured_path: Path, video_override: str | None = None) -> Path:
     out_path.write_text(
         json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8",
     )
-    print(f"Extracted {len(sections)} sections -> {out_path}")
+    log.info("Extracted %d sections -> %s", len(sections), out_path)
 
     for s in sections:
-        end_label = f" — {s['end_sec']:.0f}s" if s["end_sec"] else ""
+        end_label = f" - {s['end_sec']:.0f}s" if s["end_sec"] else ""
         level_prefix = "  " if s["level"] == 3 else ""
-        print(f"  {level_prefix}[{s['start_sec']:6.0f}s{end_label}] {s['title']}")
+        log.info("%s[%6.0fs%s] %s", level_prefix, s["start_sec"], end_label, s["title"])
 
     return out_path
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """CLI: structured transcript -> sections JSON for the Vegas importer."""
     ap = argparse.ArgumentParser(
         description="Extract sections from structured transcript for Vegas import",
     )
     ap.add_argument("input", type=Path, help="Path to *_structured.md file")
     ap.add_argument("--video", type=str, default=None,
                     help="Override source video path (auto-detected from catalog JSON)")
-    args = ap.parse_args()
-    run(args.input, video_override=args.video)
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
+    try:
+        print(run(args.input, video_override=args.video))
+    except (FileNotFoundError, ValueError) as exc:
+        log.error("%s", exc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

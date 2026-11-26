@@ -8,7 +8,10 @@ and persisted in the output JSON.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 _ocr_cache: dict = {}
 
@@ -20,17 +23,27 @@ def _imread_unicode(path: Path):
     narrow-char fopen on Windows and silently fails on Unicode paths — e.g. a
     frame dir named after a video whose title contains an em-dash. Reading the
     bytes via np.fromfile and decoding with cv2.imdecode sidesteps that.
-    Returns None if the file is missing or cannot be decoded.
+    Returns None, with a warning naming the frame, if the file is missing,
+    empty or not a decodable image.
     """
     import cv2
     import numpy as np
     try:
         data = np.fromfile(str(path), dtype=np.uint8)
-        if data.size == 0:
-            return None
-        return cv2.imdecode(data, cv2.IMREAD_COLOR)
-    except Exception:
+    except OSError as exc:
+        log.warning("OCR: cannot read frame %s: %s", path, exc)
         return None
+    if data.size == 0:
+        log.warning("OCR: frame %s is empty", path)
+        return None
+    try:
+        img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except cv2.error as exc:
+        log.warning("OCR: cannot decode frame %s: %s", path, exc)
+        return None
+    if img is None:
+        log.warning("OCR: frame %s is not a decodable image", path)
+    return img
 
 
 def _get_reader(languages=("en",), gpu: bool = True):
@@ -52,17 +65,32 @@ def extract_frame_text(
 ) -> list[list[str]]:
     """Run OCR on each frame. Returns a list aligned with frame_paths,
     each entry being the raw text lines detected on that frame (filtered
-    by confidence and length)."""
+    by confidence and length).
+
+    A frame that cannot be read or recognised yields [] and a warning. If OCR
+    fails on every frame, RuntimeError: an all-empty result would otherwise
+    look like footage without any text on screen."""
+    import cv2
+
     reader = _get_reader(languages, gpu)
     per_frame: list[list[str]] = []
+    failures = 0
+    last_error: Exception | str = ""
     for fp in frame_paths:
         img = _imread_unicode(fp)
         if img is None:
+            failures += 1
+            last_error = f"unreadable frame {fp.name}"
             per_frame.append([])
             continue
         try:
             detections = reader.readtext(img)
-        except Exception:
+        except (RuntimeError, ValueError, cv2.error) as exc:
+            # EasyOCR raises RuntimeError from torch (CUDA, out of memory),
+            # cv2.error and ValueError on an image it cannot process.
+            failures += 1
+            last_error = exc
+            log.warning("OCR failed on %s: %s", fp.name, exc)
             per_frame.append([])
             continue
         lines: list[str] = []
@@ -74,6 +102,8 @@ def extract_frame_text(
                 continue
             lines.append(t)
         per_frame.append(lines)
+    if frame_paths and failures == len(frame_paths):
+        raise RuntimeError(f"OCR failed on all {failures} frames; last error: {last_error}")
     return per_frame
 
 
@@ -101,6 +131,7 @@ def _is_noise(line: str) -> bool:
 
 
 def filter_noise(lines: list[str]) -> list[str]:
+    """Drop OCR lines that are clearly garbage: under 3 characters, no letters, mostly symbols."""
     return [ln for ln in lines if not _is_noise(ln)]
 
 

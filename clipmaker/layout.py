@@ -31,14 +31,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from itertools import pairwise
 from pathlib import Path
 
-from . import config
 from . import catalog as _catalog
+from . import config
+from .log import add_verbose_flag, setup_logging
 from .vegas_takes import TAKES_COMMENT, TakeSegment, VegasConfig, find_vegas_config
+
+log = logging.getLogger(__name__)
 
 LAYOUT_VERSION = 2
 DEFAULT_TRACK = "B-Roll (layout)"
@@ -47,6 +52,7 @@ DEFAULT_FADE_MS = 400
 
 @dataclass(frozen=True)
 class LayoutEvent:
+    """One clip placed on the timeline, times in frame-quantized milliseconds."""
     fragment: int
     start_ms: int         # narration-relative, frame-quantized
     length_ms: int        # frame-quantized
@@ -58,6 +64,7 @@ class LayoutEvent:
 
 @dataclass
 class LayoutResult:
+    """Events plus what could not be placed: uncovered fragments, warnings, errors."""
     events: list[LayoutEvent] = field(default_factory=list)
     uncovered: list[str] = field(default_factory=list)  # fragments without video
     warnings: list[str] = field(default_factory=list)
@@ -109,6 +116,7 @@ def probe_duration_sec(path: Path) -> float | None:
 
 
 def load_catalog_index(games: list[str]) -> dict[str, dict]:
+    """Catalog entries of the given games by original_name."""
     return _catalog.load_index(games)
 
 
@@ -145,6 +153,7 @@ def stale_precut_clips(clips_dir: Path, fragment: int, video_name: str | None) -
 def build_layout(timings: list[dict], fps: float, clips_dir: Path,
                  footage_dir: Path, catalog: dict[str, dict],
                  probe=probe_duration_sec) -> LayoutResult:
+    """Place every fragment's clip on the narration timeline, collecting problems instead of guessing."""
     res = LayoutResult()
 
     for t in sorted(timings, key=lambda x: x["start_sec"]):
@@ -156,7 +165,7 @@ def build_layout(timings: list[dict], fps: float, clips_dir: Path,
         frag_end = float(t.get("end_sec", t["start_sec"] + t["duration_sec"]))
         frag_len_ms = quantize_ms(frag_end, fps) - start_ms
         preview = (t.get("text_preview") or t.get("transcript_preview") or "")
-        label = (t.get("label") or f"fr {num:02d} {preview}").replace("|", "/").strip()[:80]
+        label = clean_label(t.get("label") or f"fr {num:02d} {preview}")
         video_name = t.get("primary_video")
 
         if not video_name:
@@ -169,6 +178,7 @@ def build_layout(timings: list[dict], fps: float, clips_dir: Path,
                 f"fr {num:02d}: clips/ has {', '.join(stale)} from an earlier pick, not "
                 f"{video_name} — ignored; re-run clip_extractor to refresh clips/")
         precut = find_precut_clip(clips_dir, num, video_name)
+        path: Path | None
         if precut is not None:
             path = precut
             take_offset_sec = 0.0
@@ -250,7 +260,7 @@ def find_overlaps(events: list[LayoutEvent], fps: float) -> list[str]:
     frame_ms = 1000 / fps
     problems = []
     ordered = sorted(events, key=lambda e: e.start_ms)
-    for prev, cur in zip(ordered, ordered[1:]):
+    for prev, cur in pairwise(ordered):
         overlap_ms = prev.start_ms + prev.length_ms - cur.start_ms
         if overlap_ms > frame_ms:
             problems.append(
@@ -265,9 +275,17 @@ def find_overlaps(events: list[LayoutEvent], fps: float) -> list[str]:
 # output rendering
 # --------------------------------------------------------------------------
 
+def clean_label(text: str) -> str:
+    """An event label safe for one layout.txt line: no '|' (the field separator),
+    no line breaks (one event per line), at most 80 characters."""
+    flat = " ".join(str(text).replace("|", "/").split())
+    return flat[:80]
+
+
 def render_layout_txt(res: LayoutResult, project: str, audio: str,
                       fps: float, track: str, fade_ms: int,
                       takes: tuple[TakeSegment, ...] = ()) -> str:
+    """layout.txt for the Vegas loader: header lines, then one event per line."""
     lines = [
         f"# clipmaker layout v{LAYOUT_VERSION} — {project}",
         "# times are milliseconds relative to the narration start;",
@@ -282,12 +300,16 @@ def render_layout_txt(res: LayoutResult, project: str, audio: str,
         lines += [TAKES_COMMENT] + [t.line() for t in takes]
     lines.append("---")
     for e in res.events:
+        if any(c in str(e.path) for c in "|\r\n"):
+            raise ValueError(f"fr {e.fragment:02d}: media path {str(e.path)!r} contains '|' "
+                             "or a line break, which layout.txt cannot carry")
         lines.append(f"{e.start_ms}|{e.length_ms}|{e.take_offset_ms}"
-                     f"|{e.label}|{e.path}")
+                     f"|{clean_label(e.label)}|{e.path}")
     return "\n".join(lines) + "\n"
 
 
 def render_review_md(res: LayoutResult, project: str, fps: float) -> str:
+    """The layout as a Markdown table to check before running the Vegas script."""
     lines = [
         f"# Layout review: {project}",
         "",
@@ -321,8 +343,8 @@ def resolve_fps(cli_fps: float | None, cfg: VegasConfig | None) -> float:
     """--fps wins over vegas.json; one of them must say it."""
     cfg_fps = cfg.fps if cfg else None
     if cli_fps is not None:
-        if cfg_fps is not None and abs(cli_fps - cfg_fps) > 1e-6:
-            print(f"  WARN  --fps {cli_fps:g} overrides fps {cfg_fps:g} from {cfg.path}")
+        if cfg is not None and cfg_fps is not None and abs(cli_fps - cfg_fps) > 1e-6:
+            log.warning("--fps %g overrides fps %g from %s", cli_fps, cfg_fps, cfg.path)
         return cli_fps
     if cfg_fps is not None:
         return cfg_fps
@@ -331,6 +353,7 @@ def resolve_fps(cli_fps: float | None, cfg: VegasConfig | None) -> float:
 
 
 def detect_audio(project_dir: Path, override: str | None) -> str:
+    """The narration file name: the override, else the folder's only .mp3."""
     if override:
         return override
     mp3s = sorted(p.name for p in project_dir.glob("*.mp3"))
@@ -343,7 +366,8 @@ def detect_audio(project_dir: Path, override: str | None) -> str:
              + "\n  ".join(mp3s))
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """CLI: write layout.txt and layout_review.md for a project."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--project", required=True)
     ap.add_argument("--fps", type=float, default=None,
@@ -360,7 +384,9 @@ def main() -> None:
                          "path, clip_start, label} (relative to the project dir) "
                          "used instead of timings.json — for map clips and stills "
                          "placed on the spoken second")
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     project_dir = config.project_path(args.project)
     if not project_dir.is_dir():
@@ -384,7 +410,7 @@ def main() -> None:
         if not timings_path.exists():
             sys.exit(f"No timings.json in {project_dir} — run build_storyboard first.")
         timings = json.loads(timings_path.read_text(encoding="utf-8"))
-    games = sorted({t.get("video_game") for t in timings if t.get("video_game")})
+    games = sorted({str(t["video_game"]) for t in timings if t.get("video_game")})
     catalog = load_catalog_index(games)
     audio = detect_audio(project_dir, args.audio or (vegas_cfg.audio if vegas_cfg else None))
 
@@ -392,22 +418,27 @@ def main() -> None:
                        project_dir / "footage", catalog)
 
     for w in res.warnings:
-        print(f"  WARN  {w}")
+        log.warning("%s", w)
     if res.errors:
-        print(f"\nLayout NOT written — {len(res.errors)} error(s):")
         for e in res.errors:
-            print(f"  ERROR {e}")
+            log.error("%s", e)
+        log.error("Layout NOT written - %d error(s)", len(res.errors))
         sys.exit(1)
 
     layout_path = project_dir / "layout.txt"
     review_path = project_dir / "layout_review.md"
-    layout_path.write_text(
-        render_layout_txt(res, args.project, audio, fps,
-                          args.track, args.fade_ms, takes), encoding="utf-8")
+    try:
+        layout_text = render_layout_txt(res, args.project, audio, fps,
+                                        args.track, args.fade_ms, takes)
+    except ValueError as exc:
+        log.error("%s", exc)
+        log.error("Layout NOT written")
+        sys.exit(1)
+    layout_path.write_text(layout_text, encoding="utf-8")
     review_path.write_text(render_review_md(res, args.project, fps),
                            encoding="utf-8")
 
-    print(f"\nEvents: {len(res.events)}, uncovered fragments: {len(res.uncovered)}, "
+    print(f"Events: {len(res.events)}, uncovered fragments: {len(res.uncovered)}, "
           f"warnings: {len(res.warnings)}, fps: {fps:g}, take segments: {len(takes)}")
     print(f"Layout:  {layout_path}")
     print(f"Review:  {review_path}")

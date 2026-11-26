@@ -18,8 +18,10 @@ CLI:
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -27,6 +29,9 @@ from pathlib import Path
 
 from . import config
 from .game_vocab import vocab_for
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 _NO_VISUAL = "NONE"
 
@@ -174,8 +179,8 @@ def _cache_path() -> Path:
 
 
 def _cache_key(fragment: str, game: str | None, model: str) -> str:
-    raw = f"{model}|{game or ''}|{fragment}".encode("utf-8")
-    return hashlib.sha1(raw).hexdigest()[:20]
+    raw = f"{model}|{game or ''}|{fragment}".encode()
+    return hashlib.sha1(raw, usedforsecurity=False).hexdigest()[:20]
 
 
 def _load_cache() -> dict[str, list[str]]:
@@ -184,7 +189,8 @@ def _load_cache() -> dict[str, list[str]]:
         return {}
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError) as exc:
+        _warn_once(f"shot query cache {path} is unreadable ({exc}); starting an empty one")
         return {}
 
 
@@ -193,8 +199,9 @@ def _store_cache(cache: dict[str, list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
-    except OSError:
-        pass  # a cache miss next run is not worth failing a storyboard over
+    except OSError as exc:
+        # A cache miss next run is not worth failing a storyboard over.
+        _warn_once(f"shot query cache {path} not written ({exc}); the next run asks Ollama again")
 
 
 # --------------------------------------------------------------------------
@@ -217,13 +224,18 @@ def _call_ollama(prompt: str, system: str, model: str) -> str | None:
         "options": {"temperature": 0.1},
     }).encode("utf-8")
 
-    request = urllib.request.Request(
+    if not config.OLLAMA_URL.startswith(("http://", "https://")):
+        _warn_once(f"CLIPMAKER_OLLAMA_URL {config.OLLAMA_URL!r} is not an http(s) URL; searching "
+                   "with the narration text itself")
+        return None
+    request = urllib.request.Request(  # noqa: S310 - http(s) only, checked above
         config.OLLAMA_URL,
         data=payload,
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=config.SHOT_QUERY_TIMEOUT) as resp:
+        # Scheme checked above: no file:// or custom handlers from the environment.
+        with urllib.request.urlopen(request, timeout=config.SHOT_QUERY_TIMEOUT) as resp:  # noqa: S310
             data = json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
         _warn_once(f"Ollama at {config.OLLAMA_URL} did not answer ({exc}); searching with the "
@@ -244,10 +256,12 @@ def _warn_once(message: str) -> None:
     key = message.split(";")[0]
     if key not in _warned:
         _warned.add(key)
-        print(f"[shot_query] {message}")
+        log.warning("[shot_query] %s", message)
 
 
-def _parse_reply(reply: str, max_queries: int) -> list[str]:
+def _parse_reply(reply: str, max_queries: int) -> list[str] | None:
+    """Shot descriptions from the model's reply; [] when it said nothing is
+    filmable, None when the reply held no usable line at all."""
     lines = []
     for raw in reply.splitlines():
         line = raw.strip().strip("-•*").strip()
@@ -266,7 +280,7 @@ def _parse_reply(reply: str, max_queries: int) -> list[str]:
         if line.upper().startswith(_NO_VISUAL):
             return []
         lines.append(line)
-    return lines[:max_queries]
+    return lines[:max_queries] if lines else None
 
 
 # --------------------------------------------------------------------------
@@ -308,21 +322,30 @@ def build_shot_queries(
         return [ShotQuery(text=fragment, source="fragment")]
 
     queries = _parse_reply(reply, max_queries)
+    if queries is None:
+        # Only bullets, numbers or quotes: a failed answer, not "nothing
+        # filmable" - not cached, searched with the fragment itself.
+        _warn_once(f"Ollama model {model!r} gave no usable shot description; searching "
+                   "with the narration text itself for such fragments")
+        return [ShotQuery(text=fragment, source="fragment")]
+    if not queries:
+        log.info("[shot_query] nothing filmable in: %s", fragment[:60])
     if use_cache:
         cache[key] = queries
         _store_cache(cache)
     return [ShotQuery(text=q, source="llm") for q in queries]
 
 
-def _main() -> None:
-    import argparse
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: print the picture queries for one narration fragment."""
     parser = argparse.ArgumentParser(description="Narration fragment -> shot descriptions")
     parser.add_argument("fragment")
     parser.add_argument("--game", default=None)
     parser.add_argument("--model", default=None)
     parser.add_argument("--no-cache", action="store_true")
-    args = parser.parse_args()
+    add_verbose_flag(parser)
+    args = parser.parse_args(argv)
+    setup_logging(args.verbose)
 
     queries = build_shot_queries(
         args.fragment, game=args.game, model=args.model, use_cache=not args.no_cache
@@ -335,4 +358,4 @@ def _main() -> None:
 
 
 if __name__ == "__main__":
-    _main()
+    main()

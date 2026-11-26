@@ -7,6 +7,7 @@ suitable for stock footage APIs.
 """
 from __future__ import annotations
 
+import argparse
 import re
 
 SHOT_TYPES = {
@@ -179,14 +180,13 @@ def extract_stock_query(text: str, game: str | None = None) -> str:
     return " ".join(unique[:8])
 
 
-if __name__ == "__main__":
-    import argparse
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: print the shot types and stock query of narration fragments."""
     ap = argparse.ArgumentParser(description="Shot type and stock query for narration fragments "
                                  "(no arguments: a built-in Russian demo)")
     ap.add_argument("fragment", nargs="*", help="narration fragments to classify")
     ap.add_argument("--game", default="diablo4", help="game key for the stock query hint")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     test_fragments = args.fragment or [
         "Я вернулся в Diablo IV после полутора лет перерыва, когда вышел Lord of Hatred.",
         "Босс был настолько сложный, что я потратил три часа на одну попытку прохождения.",
@@ -199,3 +199,7 @@ if __name__ == "__main__":
         print(f"  Types: {[(t, f'{s:.2f}') for t, s in types[:3]]}")
         print(f"  Stock query: {extract_stock_query(frag, game=args.game)}")
         print()
+
+
+if __name__ == "__main__":
+    main()

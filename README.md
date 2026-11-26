@@ -1,6 +1,6 @@
 # Clipweaver
 
-*Python package: `clipmaker` — every step runs as `python -m clipmaker.<step>`.*
+*Python package: `clipmaker` — every step runs as `clipweaver <step>` (same as `python -m clipmaker.<step>`).*
 
 A pre-production assistant for game video essays: it indexes your own gameplay
 footage with a local vision-language model, finds the moments your narration
@@ -97,7 +97,13 @@ pytest -q
 ```
 
 Extras: `vlm` (indexing), `ocr`, `search` (E5 embeddings), `transcribe`
-(Whisper), `youtube` (yt-dlp), `all`.
+(Whisper), `youtube` (yt-dlp), `resolve` (OTIO export), `all`; `test` and `lint`
+for development. `requirements.txt` is generated from `pyproject.toml`
+(`python tools/requirements_txt.py`).
+
+A regular `pip install ".[all]"` works as well: `.env`, `catalog/`, `projects/`
+and the caches then live in the folder you run from, or in `CLIPMAKER_HOME` if
+you set it — never inside site-packages. Put `games_local.py` there too.
 
 ## Configure
 
@@ -119,8 +125,9 @@ voice-over ──► transcribe ──► align ──► build_storyboard ─�
                                    layout ──► layout.txt ──► vegas_scripts/import_layout.cs
 ```
 
-Each step is a module with its own `python -m clipmaker.<module> --help`. Step by step, with
-the files each step reads and writes: [GUIDE.md](GUIDE.md).
+`clipweaver --help` lists the steps; each has its own `clipweaver <step> --help`.
+Progress and warnings go to stderr, results to stdout; `-v/--verbose` adds debug
+detail. Step by step, with the files each step reads and writes: [GUIDE.md](GUIDE.md).
 
 ## Claude Code skills
 

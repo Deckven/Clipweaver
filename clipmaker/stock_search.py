@@ -6,22 +6,29 @@ Both APIs are free with rate limits (Pexels: 200/hr, Pixabay: 5000/hr).
 """
 from __future__ import annotations
 
+import argparse
+import logging
+
 import requests
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 
 def search_pexels(query: str, max_results: int = 5) -> list[dict]:
+    """Stock videos from Pexels for a query; [] without PEXELS_API_KEY or on an error."""
     if not config.PEXELS_API_KEY:
         return []
     url = "https://api.pexels.com/videos/search"
     headers = {"Authorization": config.PEXELS_API_KEY}
-    params = {"query": query, "per_page": max_results, "orientation": "landscape"}
+    params: dict[str, str | int] = {"query": query, "per_page": max_results, "orientation": "landscape"}
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=15)
         resp.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Pexels] Error: {exc}")
+        log.warning("[Pexels] %s", exc)
         return []
 
     results = []
@@ -43,15 +50,16 @@ def search_pexels(query: str, max_results: int = 5) -> list[dict]:
 
 
 def search_pixabay(query: str, max_results: int = 5) -> list[dict]:
+    """Stock videos from Pixabay for a query; [] without PIXABAY_API_KEY or on an error."""
     if not config.PIXABAY_API_KEY:
         return []
     url = "https://pixabay.com/api/videos/"
-    params = {"key": config.PIXABAY_API_KEY, "q": query, "per_page": max_results}
+    params: dict[str, str | int] = {"key": config.PIXABAY_API_KEY, "q": query, "per_page": max_results}
     try:
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Pixabay] Error: {exc}")
+        log.warning("[Pixabay] %s", exc)
         return []
 
     results = []
@@ -79,14 +87,20 @@ def search_stock(query: str, max_results: int = 5) -> list[dict]:
     return results[:max_results * 2]
 
 
-if __name__ == "__main__":
-    import argparse
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: search stock video by words."""
     ap = argparse.ArgumentParser(description="Search stock video on Pexels and Pixabay (API keys in .env)")
     ap.add_argument("query", nargs="+", help="search words")
-    q = " ".join(ap.parse_args().query)
-    print(f"Searching stock footage for: {q}\n")
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
+    q = " ".join(args.query)
+    log.info("Searching stock footage for: %s", q)
     for r in search_stock(q):
         print(f"  [{r['source']}] {r['title']} ({r['duration_sec']}s)")
         print(f"    {r['url']}")
         print()
+
+
+if __name__ == "__main__":
+    main()

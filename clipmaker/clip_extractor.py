@@ -10,14 +10,18 @@ Usage:
     python -m clipmaker.clip_extractor <project-name>
 """
 
+import argparse
 import json
+import logging
 import subprocess
 from pathlib import Path
 
 from . import config
 from . import catalog as _catalog
+from .log import add_verbose_flag, setup_logging
 
-CATALOG_DIR = config.CATALOG_DIR
+log = logging.getLogger(__name__)
+
 
 
 def _sec_to_ts(sec: float) -> str:
@@ -27,6 +31,7 @@ def _sec_to_ts(sec: float) -> str:
 
 
 def load_catalog_index(game: str) -> dict[str, dict]:
+    """Catalog entries of one game by original_name."""
     return _catalog.load_index([game])
 
 
@@ -69,7 +74,7 @@ def extract_clip(source: Path, start_sec: float, end_sec: float, out: Path) -> b
         if result.returncode == 0:
             return True
         last_err = result.stderr.decode(errors="replace")[-400:]
-    print(f"    ffmpeg failed for {out.name}:\n{last_err}")
+    log.error("ffmpeg failed for %s, stderr tail:\n%s", out.name, last_err)
     return False
 
 
@@ -91,7 +96,8 @@ def clear_fragment_clips(clips_dir: Path, fragment: int) -> list[str]:
     return removed
 
 
-def main(project: str) -> None:
+def run(project: str) -> Path:
+    """Cut every fragment's range into clips/ and write _cut_list.md; returns its path."""
     project_dir = config.project_path(project)
     clips_dir = project_dir / "clips"
     footage_dir = project_dir / "footage"
@@ -106,8 +112,8 @@ def main(project: str) -> None:
     catalog: dict[str, dict] = {}
     for g in games:
         catalog.update(load_catalog_index(g))
-    print(f"{len(timings)} fragments, games={games}, "
-          f"catalog has {len(catalog)} entries")
+    log.info("%d fragments, games=%s, catalog has %d entries",
+             len(timings), games, len(catalog))
 
     clips_dir.mkdir(parents=True, exist_ok=True)
     cut_lines = ["# Cut List", ""]
@@ -118,7 +124,7 @@ def main(project: str) -> None:
         num = t["fragment"]
         duration = t["duration_sec"]
         for old in clear_fragment_clips(clips_dir, num):
-            print(f"  Frag {num:2d}: removed old clip {old}")
+            log.info("Frag %2d: removed old clip %s", num, old)
         video_name = t.get("primary_video")
         preview = t.get("text_preview", "")
 
@@ -130,21 +136,21 @@ def main(project: str) -> None:
         if not video_name:
             cut_lines.append("NO LOCAL VIDEO")
             cut_lines.append("")
-            print(f"  Frag {num:2d}: no video")
+            log.info("Frag %2d: no video", num)
             continue
 
         source = resolve_source(video_name, footage_dir, catalog)
         if source is None:
             cut_lines.append(f"MISSING: {video_name}")
             cut_lines.append("")
-            print(f"  Frag {num:2d}: MISSING {video_name}")
+            log.warning("Frag %2d: MISSING %s", num, video_name)
             continue
 
         if "clip_start" not in t or "clip_end" not in t:
             cut_lines.append(f"NO RANGE: {video_name} — no curated range and no "
                              f"semantic moment; add one to curation.json")
             cut_lines.append("")
-            print(f"  Frag {num:2d}: NO RANGE for {video_name}")
+            log.warning("Frag %2d: NO RANGE for %s", num, video_name)
             continue
 
         start, end = float(t["clip_start"]), float(t["clip_end"])
@@ -153,7 +159,7 @@ def main(project: str) -> None:
             cut_lines.append(f"BAD RANGE: {video_name} {start:.3f}-{end:.3f}s — the end is "
                              f"not after the start; fix curation.json")
             cut_lines.append("")
-            print(f"  Frag {num:2d}: BAD RANGE {start:.3f}-{end:.3f}")
+            log.warning("Frag %2d: BAD RANGE %.3f-%.3f", num, start, end)
             continue
         clip_name = f"{num:02d}_{Path(video_name).stem}.mp4"
         clip_path = clips_dir / clip_name
@@ -162,9 +168,9 @@ def main(project: str) -> None:
             total_clips += 1
             total_sec += clip_dur
             entry = catalog.get(video_name, {})
-            print(f"  Frag {num:2d}: {clip_name} "
-                  f"({_sec_to_ts(start)}-{_sec_to_ts(end)}, {clip_dur:.1f}s) "
-                  f"[narr {duration:.0f}s, {t.get('clip_source', '?')}]")
+            log.info("Frag %2d: %s (%s-%s, %.1fs) [narr %.0fs, %s]", num, clip_name,
+                     _sec_to_ts(start), _sec_to_ts(end), clip_dur, duration,
+                     t.get("clip_source", "?"))
             cut_lines.append(f"**Clip:** `{clip_name}`")
             cut_lines.append(f"**Source:** {video_name} "
                              f"(chosen by {t.get('clip_source', '?')})")
@@ -176,21 +182,26 @@ def main(project: str) -> None:
         else:
             cut_lines.append("FAILED to extract")
             cut_lines.append("")
-            print(f"  Frag {num:2d}: FAILED ffmpeg")
+            log.error("Frag %2d: FAILED ffmpeg", num)
 
     cut_path = clips_dir / "_cut_list.md"
     cut_path.write_text("\n".join(cut_lines), encoding="utf-8")
 
     total = int(total_sec)
-    print(f"\nDone: {total_clips} clips, {total}s total "
-          f"({total // 60}m{total % 60:02d}s)")
-    print(f"Cut list: {cut_path}")
+    log.info("Done: %d clips, %ds total (%dm%02ds)", total_clips, total, total // 60, total % 60)
+    return cut_path
 
 
-if __name__ == "__main__":
-    import argparse
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: cut a project's clips."""
     ap = argparse.ArgumentParser(
         description="Cut the ranges in a project's timings.json into clips/ (+ _cut_list.md)")
     ap.add_argument("project", help="project folder under projects/")
-    main(ap.parse_args().project)
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
+    print(f"Cut list: {run(args.project)}")
+
+
+if __name__ == "__main__":
+    main()

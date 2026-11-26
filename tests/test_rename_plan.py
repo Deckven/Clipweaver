@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from clipmaker import analyzer
+from clipmaker import analyzer, naming
 
 
 GAME = "test_game"
@@ -44,14 +44,14 @@ def catalog(tmp_path, monkeypatch):
 
 def _plan(add_calls):
     return {
-        (src.name, dst.name) for src, dst, _, _ in analyzer._rename_plan(GAME)
+        (src.name, dst.name) for src, dst, _, _ in naming._rename_plan(GAME)
     }
 
 
 def test_settled_group_of_ten_is_left_alone(catalog):
     for n in range(1, 11):
         catalog(f"Black Flag Exploring Great Inagua {n}.mp4")
-    assert analyzer._rename_plan(GAME) == []
+    assert naming._rename_plan(GAME) == []
 
 
 def test_new_entry_joins_a_group_of_ten_as_eleven(catalog):
@@ -106,14 +106,14 @@ def test_plan_is_idempotent_after_being_applied(catalog):
         catalog(f"Black Flag Exploring Great Inagua {n}.mp4")
     catalog("Raw Capture_20260826173743.mp4")
 
-    for src, dst, jp, new_jp in analyzer._rename_plan(GAME):
+    for src, dst, jp, new_jp in naming._rename_plan(GAME):
         rec = json.loads(jp.read_text(encoding="utf-8"))
         src.rename(dst)
         rec["source_path"] = str(dst)
         new_jp.write_text(json.dumps(rec), encoding="utf-8")
         jp.unlink()
 
-    assert analyzer._rename_plan(GAME) == []
+    assert naming._rename_plan(GAME) == []
 
 
 def test_shadowplay_colon_underscore_does_not_repeat_game_name(monkeypatch):

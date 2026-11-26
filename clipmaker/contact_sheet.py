@@ -23,6 +23,8 @@ from pathlib import Path
 from . import config
 from .clip_extractor import resolve_source
 from .layout import find_precut_clip
+from .log import add_verbose_flag, setup_logging
+
 
 DEFAULT_FRAMES = 4
 FRAME_WIDTH = 480
@@ -34,9 +36,12 @@ FRAME_WIDTH = 480
 
 def frame_times(start: float, end: float, count: int) -> list[float]:
     """Evenly spaced sample points, biased off the exact edges — the first and
-    last frames of a cut are fades/transitions, not representative content."""
+    last frames of a cut are fades/transitions, not representative content.
+    One frame is the middle of the range, not its first frame."""
+    if count < 1:
+        raise ValueError(f"frame count must be at least 1, got {count}")
     span = max(0.0, end - start)
-    if span == 0 or count <= 1:
+    if span == 0:
         return [start]
     step = span / (count + 1)
     return [round(start + step * (i + 1), 2) for i in range(count)]
@@ -95,6 +100,7 @@ def sheet_row(t: dict, clips_dir: Path, footage_dir: Path,
 # ---------------------------------------------------------------------------
 
 def extract_frame(media: Path, at_sec: float, out: Path) -> bool:
+    """Write one scaled frame of media at at_sec to out; False if ffmpeg fails."""
     cmd = ["ffmpeg", "-y", "-ss", f"{at_sec:.3f}", "-i", str(media),
            "-frames:v", "1", "-vf", f"scale={FRAME_WIDTH}:-1", "-q:v", "3",
            str(out)]
@@ -110,6 +116,7 @@ def extract_frame(media: Path, at_sec: float, out: Path) -> bool:
 # ---------------------------------------------------------------------------
 
 def render_html(project: str, rows: list[dict]) -> str:
+    """The contact sheet page: per fragment, its narration and the frames to be placed."""
     problems = sum(1 for r in rows if r["problem"])
     out = [
         "<!doctype html><meta charset='utf-8'>",
@@ -168,11 +175,14 @@ def render_html(project: str, rows: list[dict]) -> str:
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """CLI: build contact_sheet.html for a project."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--project", required=True)
     ap.add_argument("--frames", type=int, default=DEFAULT_FRAMES)
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     project_dir = config.project_path(args.project)
     timings_path = project_dir / "timings.json"

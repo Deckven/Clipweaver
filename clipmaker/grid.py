@@ -21,7 +21,9 @@ import sys
 from pathlib import Path
 
 from . import config
+from .log import add_verbose_flag, setup_logging
 from .stills import parse_time, video_sheet
+
 
 VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".avi", ".webm"}
 DEFAULT_COUNT = 12
@@ -31,6 +33,7 @@ AMBIGUOUS_SHOWN = 8
 
 
 def footage_files(dirs: list[Path], recursive: bool = True) -> list[Path]:
+    """Video files in the given folders, recursively by default."""
     files: set[Path] = set()
     for d in dirs:
         if not d.is_dir():
@@ -73,6 +76,7 @@ def range_times(start: float, end: float, count: int) -> list[float]:
 
 
 def search_dirs(game: str | None, extra: list[Path]) -> list[Path]:
+    """Extra folders plus the game's video_dirs from config."""
     dirs = list(extra)
     if game:
         game_cfg = config.GAMES.get(game)
@@ -83,6 +87,7 @@ def search_dirs(game: str | None, extra: list[Path]) -> list[Path]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: frame grid of a video found by name."""
     ap = argparse.ArgumentParser(prog="clipmaker.grid", description=__doc__.split("\n")[0])
     ap.add_argument("name", help="footage path, file stem, or a fragment of one")
     ap.add_argument("--from", dest="start", help="range start")
@@ -95,7 +100,9 @@ def main(argv: list[str] | None = None) -> None:
                     help="extra footage folder (repeatable)")
     ap.add_argument("--cols", type=int, default=DEFAULT_COLS)
     ap.add_argument("--tile-width", type=int, default=DEFAULT_TILE_WIDTH)
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
     if bool(args.at) == bool(args.start is not None or args.end is not None):
         ap.error("give either --at or --from/--to")
     if not args.at and (args.start is None or args.end is None):

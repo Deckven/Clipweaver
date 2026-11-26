@@ -8,23 +8,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 
 def transcribe_file(audio_path: Path, out_path: Path, language: str = "ru",
-                    model_size: str = "medium"):
+                    model_size: str = "medium") -> Path:
+    """Whisper segments with word timestamps -> out_path (JSON list); returns out_path."""
     from faster_whisper import WhisperModel
 
     if not audio_path.exists():
-        print(f"File not found: {audio_path}")
-        sys.exit(1)
+        raise FileNotFoundError(f"File not found: {audio_path}")
 
     model = WhisperModel(model_size, device="cuda", compute_type="float16")
 
-    print(f"Transcribing: {audio_path.name}  (lang={language})")
+    log.info("Transcribing: %s  (lang=%s)", audio_path.name, language)
     segments, info = model.transcribe(
         str(audio_path),
         language=language,
@@ -46,22 +50,25 @@ def transcribe_file(audio_path: Path, out_path: Path, language: str = "ru",
             ]
         result.append(entry)
         preview = seg.text.strip()[:80]
-        print(f"  [{seg.start:7.1f}s - {seg.end:7.1f}s] {preview}")
+        log.info("[%7.1fs - %7.1fs] %s", seg.start, seg.end, preview)
 
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\nSaved {len(result)} segments to {out_path}")
+    log.info("Saved %d segments to %s", len(result), out_path)
+    return out_path
 
 
-def transcribe(project: str):
-    project_dir = config.get_project_dir(project)
+def transcribe(project: str) -> Path:
+    """Transcribe a project's narration (<project>.mp3, else narration.mp3) to transcript.json."""
+    project_dir = config.project_path(project)
     audio_path = project_dir / f"{project}.mp3"
     if not audio_path.exists():
         audio_path = project_dir / "narration.mp3"
     out_path = project_dir / "transcript.json"
-    transcribe_file(audio_path, out_path, language="ru")
+    return transcribe_file(audio_path, out_path, language="ru")
 
 
-def main():
+def main(argv: list[str] | None = None) -> None:
+    """CLI: transcribe a file or a project's narration."""
     ap = argparse.ArgumentParser(description="Transcribe audio/video with word-level timestamps")
     ap.add_argument("--project", type=str, default=None,
                     help="Project name (uses project audio + Russian)")
@@ -73,15 +80,21 @@ def main():
                     help="Language code (default: ru)")
     ap.add_argument("--model", type=str, default="medium",
                     help="Whisper model size (default: medium)")
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
-    if args.file:
-        out = args.out or args.file.with_suffix(".transcript.json")
-        transcribe_file(args.file, out, language=args.lang, model_size=args.model)
-    elif args.project:
-        transcribe(args.project)
-    else:
-        transcribe("diablo4-lord-of-hatred")
+    if not args.file and not args.project:
+        ap.error("give --file or --project")
+    try:
+        if args.file:
+            out = args.out or args.file.with_suffix(".transcript.json")
+            print(transcribe_file(args.file, out, language=args.lang, model_size=args.model))
+        else:
+            print(transcribe(args.project))
+    except FileNotFoundError as exc:
+        log.error("%s", exc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,35 @@
+"""Settings: paths from .env (see .env.example), model choices and tuning constants, games.
+
+Machine-specific values (footage roots, catalog and projects folders, API keys)
+come from the environment or a .env file next to the repository; everything
+else is a constant here. GAMES comes from clipmaker/games_local.py when it
+exists, else the sample game.
+"""
 import os
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+def _data_root() -> Path:
+    """The folder .env, relative paths and the default catalog/projects hang off.
+
+    CLIPMAKER_HOME when set. Otherwise the repository when the package runs from
+    a checkout (pyproject.toml next to it: a clone, or ``pip install -e .``), and
+    the current folder for a regular ``pip install .`` - never site-packages,
+    where catalog/, _cache/ and _vlm_frames/ would be written into the Python
+    installation itself.
+    """
+    home = os.environ.get("CLIPMAKER_HOME", "").strip()
+    if home:
+        return Path(home).expanduser().resolve()
+    checkout = PACKAGE_DIR.parent
+    if (checkout / "pyproject.toml").is_file():
+        return checkout
+    return Path.cwd().resolve()
+
+
+ROOT_DIR = _data_root()
 
 
 def _load_dotenv(path: Path) -> None:
@@ -38,7 +66,7 @@ def _env_str(name: str, default: str | None = None) -> str | None:
 
 
 def _env_path(name: str, default: Path) -> Path:
-    """A path from the environment; a relative one is taken from the repo root, not the cwd."""
+    """A path from the environment; a relative one is taken from ROOT_DIR, not the cwd."""
     value = _env_str(name)
     if not value:
         return default
@@ -147,7 +175,7 @@ EMBED_MIN_COSINE = 0.70  # sanity floor only; z-score does the real work
 # Narration fragment -> visual shot descriptions (shot_query.py)
 # Bridges the gap the index cannot: narration says what the video is about,
 # catalog descriptions say what is on screen.
-OLLAMA_URL = _env_str("CLIPMAKER_OLLAMA_URL", "http://localhost:11434/api/chat")
+OLLAMA_URL: str = _env_str("CLIPMAKER_OLLAMA_URL") or "http://localhost:11434/api/chat"
 SHOT_QUERY_MODEL = "mistral-small"
 SHOT_QUERY_MAX = 3
 SHOT_QUERY_TIMEOUT = 120
@@ -167,18 +195,38 @@ SAMPLE_GAMES = {
 SAMPLE_DEFAULT_GAME = "assassins_creed_4"
 
 
-def _load_games(local=None) -> tuple[dict, str]:
+def _load_games(local=None, path: Path | None = None) -> tuple[dict, str]:
     """GAMES and DEFAULT_GAME: your clipmaker/games_local.py if it exists (optional,
-    gitignored; see GUIDE.md section 3), else the sample game."""
+    gitignored; see GUIDE.md section 3), else games_local.py in ROOT_DIR (where a
+    regular, non-editable install looks), else the sample game.
+
+    The file is loaded by its path next to this one, not as ``clipmaker.games_local``:
+    other tools (Newsroom's footage gate) load config.py on its own, without the
+    clipmaker package on sys.path, and must still see your games."""
     if local is None:
-        import importlib.util
-        if importlib.util.find_spec("clipmaker.games_local") is None:
+        if path is None:
+            candidates = [PACKAGE_DIR / "games_local.py", ROOT_DIR / "games_local.py"]
+            path = next((p for p in candidates if p.is_file()), candidates[0])
+        if not path.is_file():
             return dict(SAMPLE_GAMES), SAMPLE_DEFAULT_GAME
-        from clipmaker import games_local as local
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("clipmaker_games_local", path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load the games file {path}")
+        local = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(local)
     return local.games(RAW_FOOTAGE_DIR, EDIT_PROJECTS_DIR), local.DEFAULT_GAME
 
 
 GAMES, DEFAULT_GAME = _load_games()
+
+
+def game_config(game: str) -> dict:
+    """GAMES[game], or ValueError naming the known games."""
+    cfg = GAMES.get(game)
+    if not cfg:
+        raise ValueError(f"Unknown game '{game}'. Known: {list(GAMES)}")
+    return cfg
 
 
 def project_path(project_name: str) -> Path:

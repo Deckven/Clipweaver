@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
 
 VEGAS_JSON = "vegas.json"
 LAYOUT_TXT = "layout.txt"
@@ -49,6 +51,7 @@ _FORBIDDEN_IN_FILE = ("|", "\n", "\r")
 
 @dataclass(frozen=True)
 class TakeSegment:
+    """A piece of a raw take: file, the narration span it covers, and its lag."""
     file: str
     from_ms: int
     to_ms: int
@@ -62,27 +65,32 @@ class TakeSegment:
                              f"{self.from_ms}..{self.to_ms} ms")
 
     @classmethod
-    def from_seconds(cls, file: str, from_sec: float, to_sec: float, lag_sec: float) -> "TakeSegment":
+    def from_seconds(cls, file: str, from_sec: float, to_sec: float, lag_sec: float) -> TakeSegment:
+        """A segment from second values, rounded to milliseconds."""
         return cls(file, round(float(from_sec) * 1000), round(float(to_sec) * 1000),
                    round(float(lag_sec) * 1000))
 
     @classmethod
-    def from_dict(cls, d: dict) -> "TakeSegment":
+    def from_dict(cls, d: dict) -> TakeSegment:
+        """A segment from its vegas.json form; ValueError when a key is missing."""
         try:
             return cls.from_seconds(str(d["file"]), d["from_sec"], d["to_sec"], d["lag_sec"])
         except KeyError as exc:
             raise ValueError(f"take entry {d!r} lacks {exc}") from None
 
     def to_dict(self) -> dict:
+        """The vegas.json form of the segment, in seconds."""
         return {"file": self.file, "from_sec": self.from_ms / 1000,
                 "to_sec": self.to_ms / 1000, "lag_sec": self.lag_ms / 1000}
 
     def line(self) -> str:
+        """The take= line layout.txt carries for the loader."""
         return f"{TAKE_KEY}={self.file}|{self.from_ms}|{self.to_ms}|{self.lag_ms}"
 
 
 @dataclass(frozen=True)
 class VegasConfig:
+    """A project's vegas.json: fps, narration file and raw-take segments."""
     path: Path
     fps: float | None
     audio: str | None
@@ -94,6 +102,7 @@ class VegasConfig:
 # --------------------------------------------------------------------------
 
 def parse_vegas_config(data: dict, path: Path) -> VegasConfig:
+    """Validate vegas.json data; ValueError naming the file and the bad field."""
     if not isinstance(data, dict):
         raise ValueError(f"{path}: expected a JSON object")
     fps = data.get("fps")
@@ -149,6 +158,7 @@ def dump_vegas_json(data: dict) -> str:
 # --------------------------------------------------------------------------
 
 def parse_take_value(value: str) -> TakeSegment:
+    """A segment from the value of a take= line."""
     parts = value.split("|")
     if len(parts) != 4:
         raise ValueError(f"bad take line: {value!r}")
@@ -188,6 +198,7 @@ def set_layout_takes(text: str, takes: list[TakeSegment] | tuple[TakeSegment, ..
 
 
 def sync_layout(project_dir: Path, takes: tuple[TakeSegment, ...] | list[TakeSegment]) -> Path:
+    """Rewrite the take lines of the project's layout.txt; returns its path."""
     layout = project_dir / LAYOUT_TXT
     if not layout.exists():
         raise FileNotFoundError(f"No {layout} — run clipmaker.layout first")
@@ -208,11 +219,14 @@ def _project_dir(name: str) -> Path:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: copy vegas.json takes into layout.txt."""
     ap = argparse.ArgumentParser(prog="clipmaker.vegas_takes", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="command", required=True)
     p = sub.add_parser("sync", help="vegas.json takes -> layout.txt header")
     p.add_argument("--project", required=True)
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     project_dir = _project_dir(args.project)
     try:

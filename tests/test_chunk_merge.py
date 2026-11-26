@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from clipmaker import analyzer
+from clipmaker import vlm
 
 
 # --- title selection -------------------------------------------------------
@@ -21,7 +21,7 @@ def test_title_comes_from_the_chunk_with_most_gameplay():
         {"index": 1, "title": "Kingston Rooftop Chase", "gameplay": 9},
         {"index": 2, "title": "Confronting the Bishop", "gameplay": 4},
     ]
-    assert analyzer._pick_title(candidates) == "Kingston Rooftop Chase"
+    assert vlm._pick_title(candidates) == "Kingston Rooftop Chase"
 
 
 def test_title_ties_break_towards_the_earlier_chunk():
@@ -29,7 +29,7 @@ def test_title_ties_break_towards_the_earlier_chunk():
         {"index": 0, "title": "Exploring Havana", "gameplay": 5},
         {"index": 1, "title": "Exploring Havana Docks", "gameplay": 5},
     ]
-    assert analyzer._pick_title(candidates) == "Exploring Havana"
+    assert vlm._pick_title(candidates) == "Exploring Havana"
 
 
 def test_title_avoids_cjk_when_a_clean_candidate_exists():
@@ -37,16 +37,16 @@ def test_title_avoids_cjk_when_a_clean_candidate_exists():
         {"index": 0, "title": "Exploring奖励系统", "gameplay": 12},
         {"index": 1, "title": "Sailing to Great Inagua", "gameplay": 3},
     ]
-    assert analyzer._pick_title(candidates) == "Sailing to Great Inagua"
+    assert vlm._pick_title(candidates) == "Sailing to Great Inagua"
 
 
 def test_title_keeps_a_cjk_candidate_when_it_is_the_only_one():
     candidates = [{"index": 0, "title": "Exploring奖励系统", "gameplay": 12}]
-    assert analyzer._pick_title(candidates) == "Exploring奖励系统"
+    assert vlm._pick_title(candidates) == "Exploring奖励系统"
 
 
 def test_title_is_empty_when_no_chunk_offered_one():
-    assert analyzer._pick_title([{"index": 0, "title": "  ", "gameplay": 3}]) == ""
+    assert vlm._pick_title([{"index": 0, "title": "  ", "gameplay": 3}]) == ""
 
 
 # --- CJK detection ---------------------------------------------------------
@@ -56,12 +56,12 @@ def test_title_is_empty_when_no_chunk_offered_one():
     ("summary", "玩家在Kingston探索"),
 ])
 def test_chunk_cjk_detected_in_scalar_fields(field, value):
-    assert analyzer._chunk_has_cjk({field: value}) is True
+    assert vlm._chunk_has_cjk({field: value}) is True
 
 
 def test_chunk_cjk_detected_in_tags_and_scene_text():
-    assert analyzer._chunk_has_cjk({"tags": ["kingston", "NPC交谈"]}) is True
-    assert analyzer._chunk_has_cjk(
+    assert vlm._chunk_has_cjk({"tags": ["kingston", "NPC交谈"]}) is True
+    assert vlm._chunk_has_cjk(
         {"scenes": [{"description": "玩家跟随一名角色"}]}) is True
 
 
@@ -72,7 +72,7 @@ def test_clean_english_chunk_is_not_flagged():
         "tags": ["havana", "docks"],
         "scenes": [{"description": "Edward climbs a crane.", "type": "gameplay"}],
     }
-    assert analyzer._chunk_has_cjk(chunk) is False
+    assert vlm._chunk_has_cjk(chunk) is False
 
 
 # --- end-to-end merge over stubbed VLM calls -------------------------------
@@ -85,9 +85,9 @@ def _chunked(monkeypatch, responses):
         calls.append(kw)
         return responses[len(calls) - 1]
 
-    monkeypatch.setattr(analyzer, "run_vlm", fake_run_vlm)
+    monkeypatch.setattr(vlm, "run_vlm", fake_run_vlm)
     frames = [Path(f"f{i}.jpg") for i in range(100)]
-    result = analyzer._run_vlm_chunked(
+    result = vlm._run_vlm_chunked(
         frames, duration_sec=500, interval=5,
         game_hint="assassins_creed_4", vocab_hint="", name_hint="clip",
         path_hints={}, ocr_lines=[], device="cpu", chunk_size=50,
@@ -120,7 +120,7 @@ def test_cjk_chunk_is_retried_with_different_decoding(monkeypatch):
     assert calls[0]["do_sample"] is False
     assert calls[1]["do_sample"] is True
     assert result["title"] == "Kingston Rooftop Chase"
-    assert not any(analyzer._has_cjk(t) for t in result["tags"])
+    assert not any(vlm._has_cjk(t) for t in result["tags"])
 
 
 def test_unfixable_cjk_chunk_keeps_its_scenes_but_loses_its_tags(monkeypatch):
@@ -130,4 +130,4 @@ def test_unfixable_cjk_chunk_keeps_its_scenes_but_loses_its_tags(monkeypatch):
     assert len(result["scenes"]) == 3
     # Tags are search keys — the Chinese ones would never match a query.
     assert result["tags"] == ["kingston", "chase"]
-    assert not analyzer._has_cjk(result["summary"])
+    assert not vlm._has_cjk(result["summary"])

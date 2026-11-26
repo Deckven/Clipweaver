@@ -14,12 +14,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
+
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
+
+
+class TranscriberError(RuntimeError):
+    """A stage failed for a reason the user can fix (ffmpeg, Ollama, input file)."""
 
 AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma"})
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".ts"})
@@ -75,6 +86,7 @@ No title/summary/TOC — just sections.\
 
 
 def format_timestamp(seconds: float) -> str:
+    """Seconds as HH:MM:SS."""
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
     s = int(seconds % 60)
@@ -82,16 +94,18 @@ def format_timestamp(seconds: float) -> str:
 
 
 def extract_audio(video_path: Path, audio_path: Path) -> None:
+    """16 kHz mono WAV of a video's audio track; TranscriberError with ffmpeg's stderr."""
     cmd = [
         "ffmpeg", "-i", str(video_path),
         "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
         "-y", str(audio_path),
     ]
-    print(f"Extracting audio from {video_path.name}...")
+    log.info("Extracting audio from %s...", video_path.name)
     result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
-        print(f"ffmpeg error:\n{result.stderr.decode(errors='replace')}")
-        sys.exit(1)
+        stderr = result.stderr.decode(errors="replace").strip()
+        raise TranscriberError(f"ffmpeg could not extract audio from {video_path.name} "
+                               f"(exit {result.returncode}):\n{stderr[-1500:]}")
 
 
 # Keeps loaded WhisperModel objects referenced for the lifetime of the process.
@@ -119,7 +133,7 @@ def _collect_segments(segments_iter) -> list[dict]:
                 for w in seg.words
             ]
         segments.append(entry)
-        print(f"  [{seg.start:7.1f}s — {seg.end:7.1f}s] {seg.text.strip()[:80]}")
+        log.info("[%7.1fs - %7.1fs] %s", seg.start, seg.end, seg.text.strip()[:80])
     return segments
 
 
@@ -161,8 +175,8 @@ def transcribe_raw(
 
     lang_label = "auto" if language is None else language
     vad_label = "on" if use_vad else "off"
-    print(f"Transcribing: {audio_path.name}  "
-          f"(lang={lang_label}, model={model_size}, vad={vad_label})")
+    log.info("Transcribing: %s  (lang=%s, model=%s, vad=%s)",
+             audio_path.name, lang_label, model_size, vad_label)
 
     segments_iter, info = model.transcribe(
         str(audio_path),
@@ -172,18 +186,18 @@ def transcribe_raw(
     )
 
     detected = info.language
-    print(f"Detected language: {detected} (probability: {info.language_probability:.2f})")
+    log.info("Detected language: %s (probability: %.2f)", detected, info.language_probability)
 
     segments = _collect_segments(segments_iter)
-    print(f"\nTranscription complete: {len(segments)} segments")
+    log.info("Transcription complete: %d segments", len(segments))
 
     total = float(getattr(info, "duration", 0.0))
     if use_vad and _looks_truncated(segments, total):
         last_end = segments[-1]["end"]
-        print(f"\nWARNING: speech ends at {last_end:.0f}s but the audio is "
-              f"{total:.0f}s long — the VAD filter may have dropped narration.")
+        log.warning("speech ends at %.0fs but the audio is %.0fs long - the VAD "
+                    "filter may have dropped narration.", last_end, total)
         if vad_fallback:
-            print("Retrying without VAD (disable with --no-vad-fallback)...")
+            log.info("Retrying without VAD (disable with --no-vad-fallback)...")
             nv_iter, _ = model.transcribe(
                 str(audio_path),
                 language=language,
@@ -192,20 +206,21 @@ def transcribe_raw(
             )
             nv_segments = _collect_segments(nv_iter)
             nv_last = nv_segments[-1]["end"] if nv_segments else 0.0
-            print(f"\nNo-VAD pass complete: {len(nv_segments)} segments "
-                  f"(ends at {nv_last:.0f}s)")
+            log.info("No-VAD pass complete: %d segments (ends at %.0fs)",
+                     len(nv_segments), nv_last)
             if nv_last > last_end + 30.0:
-                print("Using no-VAD result (covers more of the audio).")
+                log.info("Using no-VAD result (covers more of the audio).")
                 segments = nv_segments
             else:
-                print("Keeping VAD result (no-VAD did not add coverage).")
+                log.info("Keeping VAD result (no-VAD did not add coverage).")
         else:
-            print("Re-run with --no-vad to capture the full audio.")
+            log.warning("Re-run with --no-vad to capture the full audio.")
 
     return segments, detected
 
 
 def format_raw_markdown(segments: list[dict], source_name: str, language: str) -> str:
+    """The raw transcript as Markdown, one timestamped line per segment."""
     if not segments:
         return f"# Raw Transcript: {source_name}\n\nNo speech detected.\n"
 
@@ -298,6 +313,7 @@ def chunk_for_llm(segments: list[dict], max_chars: int = MAX_CHUNK_CHARS) -> lis
 
 
 def query_ollama(prompt: str, system: str, model: str) -> str:
+    """The model's reply; TranscriberError if Ollama is unreachable or refuses."""
     payload = json.dumps({
         "model": model,
         "messages": [
@@ -307,23 +323,21 @@ def query_ollama(prompt: str, system: str, model: str) -> str:
         "stream": False,
     }).encode("utf-8")
 
-    req = urllib.request.Request(
+    req = urllib.request.Request(  # noqa: S310 - OLLAMA_URL is a fixed http:// constant
         OLLAMA_URL,
         data=payload,
         headers={"Content-Type": "application/json"},
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
+        with urllib.request.urlopen(req, timeout=600) as resp:  # noqa: S310 - fixed http:// URL
             data = json.loads(resp.read())
-    except urllib.error.URLError as exc:
-        print(f"Ollama connection error ({OLLAMA_URL}): {exc}")
-        print("Make sure Ollama is running: ollama serve")
-        sys.exit(1)
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise TranscriberError(f"Ollama connection error ({OLLAMA_URL}): {exc}. "
+                               "Make sure Ollama is running: ollama serve") from exc
 
     if "error" in data:
-        print(f"Ollama error: {data['error']}")
-        sys.exit(1)
+        raise TranscriberError(f"Ollama error: {data['error']}")
 
     return data["message"]["content"]
 
@@ -336,7 +350,7 @@ def structure_transcript(
     """Send raw transcript to Ollama for structuring."""
     chunks = chunk_for_llm(segments)
     total = len(chunks)
-    print(f"\nStructuring with {ollama_model} ({total} chunk{'s' if total != 1 else ''})...")
+    log.info("Structuring with %s (%d chunk%s)...", ollama_model, total, "s" if total != 1 else "")
 
     # Smaller local models drift to English mid-document despite rule #8; naming the
     # language explicitly and forbidding translation keeps the whole output consistent.
@@ -355,9 +369,8 @@ def structure_transcript(
         label = "transcript" if is_first else "continuation"
         prompt = f"Here is the {label} (language: {language}):\n\n{chunk}"
 
-        print(f"  Chunk {i + 1}/{total}...", end=" ", flush=True)
+        log.info("Chunk %d/%d...", i + 1, total)
         result = query_ollama(prompt, system, ollama_model)
-        print("done")
         parts.append(result)
 
     return "\n\n".join(parts)
@@ -376,11 +389,11 @@ def run(
 ) -> dict[str, Path]:
     """Run the transcription pipeline.
 
-    Returns dict mapping output type to file path.
+    Returns dict mapping output type to file path. FileNotFoundError for a
+    missing input, TranscriberError when ffmpeg or Ollama fails.
     """
     if not input_path.exists():
-        print(f"File not found: {input_path}")
-        sys.exit(1)
+        raise FileNotFoundError(f"File not found: {input_path}")
 
     out_dir = output_dir or input_path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -394,23 +407,23 @@ def run(
         suffix = input_path.suffix.lower()
         is_audio = suffix in AUDIO_EXTENSIONS
 
-        if is_audio:
-            audio_path = input_path
-            tmp_audio = None
-        else:
-            tmp_dir = tempfile.mkdtemp(prefix="clipmaker_")
-            audio_path = Path(tmp_dir) / f"{stem}.wav"
-            tmp_audio = audio_path
-            extract_audio(input_path, audio_path)
+        tmp_dir = None if is_audio else Path(tempfile.mkdtemp(prefix="clipmaker_"))
+        try:
+            if tmp_dir is None:
+                audio_path = input_path
+            else:
+                audio_path = tmp_dir / f"{stem}.wav"
+                extract_audio(input_path, audio_path)
 
-        segments, detected_lang = transcribe_raw(
-            audio_path, language=language, model_size=whisper_model,
-            use_vad=use_vad, vad_fallback=vad_fallback,
-        )
-
-        if tmp_audio is not None and tmp_audio.exists():
-            tmp_audio.unlink()
-            tmp_audio.parent.rmdir()
+            segments, detected_lang = transcribe_raw(
+                audio_path, language=language, model_size=whisper_model,
+                use_vad=use_vad, vad_fallback=vad_fallback,
+            )
+        finally:
+            # A failed extraction or transcription must not leave a WAV of the
+            # whole video behind in the temp folder.
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
 
         json_path = out_dir / f"{stem}_raw_transcript.json"
         json_data = {
@@ -422,7 +435,7 @@ def run(
             json.dumps(json_data, ensure_ascii=False, indent=2), encoding="utf-8",
         )
         outputs["raw_json"] = json_path
-        print(f"\nSaved: {json_path}")
+        log.info("Saved: %s", json_path)
 
         md_path = out_dir / f"{stem}_raw_transcript.md"
         md_path.write_text(
@@ -430,7 +443,7 @@ def run(
             encoding="utf-8",
         )
         outputs["raw_md"] = md_path
-        print(f"Saved: {md_path}")
+        log.info("Saved: %s", md_path)
 
     if stage in ("all", "structure"):
         if stage == "structure":
@@ -440,7 +453,7 @@ def run(
             stem = stem.removesuffix("_raw_transcript")
 
         if not segments:
-            print("No segments to structure.")
+            log.warning("No segments to structure.")
             return outputs
 
         structured = structure_transcript(segments, detected_lang, ollama_model)
@@ -448,12 +461,13 @@ def run(
         structured_path = out_dir / f"{stem}_structured.md"
         structured_path.write_text(structured, encoding="utf-8")
         outputs["structured_md"] = structured_path
-        print(f"Saved: {structured_path}")
+        log.info("Saved: %s", structured_path)
 
     return outputs
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """CLI: transcribe a video or audio file and structure the transcript."""
     ap = argparse.ArgumentParser(
         description="Video transcriber: raw transcript + structured text via local LLM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -486,11 +500,13 @@ examples:
     ap.add_argument("--no-vad-fallback", action="store_true",
                     help="Disable the automatic no-VAD retry when a VAD transcript "
                          "looks truncated (ends far before the audio).")
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     exit_code = 0
     try:
-        run(
+        outputs = run(
             args.input,
             output_dir=args.out_dir,
             language=args.lang,
@@ -500,8 +516,11 @@ examples:
             use_vad=not args.no_vad,
             vad_fallback=not args.no_vad_fallback,
         )
-    except SystemExit as exc:  # run() calls sys.exit() on recoverable errors
-        exit_code = exc.code if isinstance(exc.code, int) else 1
+        for path in outputs.values():
+            print(path)
+    except (FileNotFoundError, TranscriberError) as exc:
+        log.error("%s", exc)
+        exit_code = 1
 
     sys.stdout.flush()
     sys.stderr.flush()

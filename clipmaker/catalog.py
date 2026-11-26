@@ -8,10 +8,13 @@ and was skipped without a word — its search hits never reached the storyboard.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 
 from . import config
+
+log = logging.getLogger(__name__)
 
 _reported: set[str] = set()
 
@@ -19,12 +22,17 @@ _reported: set[str] = set()
 def _report_once(key: str, message: str) -> None:
     if key not in _reported:
         _reported.add(key)
-        print(f"[catalog] {message}")
+        log.warning("[catalog] %s", message)
 
 
 def read_entry(path: Path) -> dict:
     """One catalog JSON. utf-8-sig accepts a leading BOM as well as plain utf-8."""
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def write_entry(record: dict, path: Path) -> None:
+    """Write one catalog JSON: UTF-8 without a BOM, non-ASCII kept readable."""
+    path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def catalog_dir(game: str) -> Path | None:

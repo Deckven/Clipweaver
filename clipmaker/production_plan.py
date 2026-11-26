@@ -10,16 +10,21 @@ Usage:
 """
 from __future__ import annotations
 
+import argparse
 import json
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
 
 from . import config
+from .log import add_verbose_flag, setup_logging
 from .youtube_search import split_into_paragraphs, extract_search_query, search_youtube
 from .report import _load_catalog, search_catalog, _detect_game, read_project_text, list_projects
 from .stock_search import search_stock
 from .shot_classifier import classify_fragment, extract_stock_query, SHOT_TYPES
+
+log = logging.getLogger(__name__)
 
 
 def _estimate_duration_sec(text: str) -> float:
@@ -96,118 +101,134 @@ def generate_plan(
 
     catalog = _load_catalog(game) if game else []
     plan_fragments = []
-    total_duration = 0.0
-    coverage_counts = {"local": 0, "youtube": 0, "stock": 0, "shoot": 0, "composite": 0}
-
     for i, frag_text in enumerate(fragments, 1):
-        duration = _estimate_duration_sec(frag_text)
-        total_duration += duration
-        shot_types = classify_fragment(frag_text, game=game)
-
-        print(f"[Plan] Fragment {i}/{len(fragments)}: {frag_text[:50]}...")
-
-        local_matches = []
-        if catalog:
-            raw = search_catalog(frag_text, catalog, max_results=config.PLAN_LOCAL_RESULTS)
-            for entry in raw:
-                entry["_score"] = _score_local_match(frag_text, entry)
-                local_matches.append(entry)
-
-        query = extract_search_query(frag_text)
-        yt_matches = []
-        if query:
-            yt_raw = search_youtube(query, max_results=config.PLAN_YT_RESULTS)
-            for v in yt_raw:
-                v["_score"] = _score_youtube_match(query, v)
-                yt_matches.append(v)
-
-        stock_query = extract_stock_query(frag_text, game=game)
-        stock_matches = search_stock(stock_query, max_results=config.PLAN_STOCK_RESULTS)
-
-        recommendation, confidence = _recommend_source(
-            local_matches, yt_matches, stock_matches, shot_types
-        )
-        coverage_counts[recommendation] += 1
-
-        fragment_data = {
-            "index": i,
-            "text": frag_text,
-            "text_preview": frag_text[:80] + ("..." if len(frag_text) > 80 else ""),
-            "duration_sec": round(duration, 1),
-            "shot_types": [(t, round(s, 2)) for t, s in shot_types[:3]],
-            "sources": {
-                "local": [
-                    {
-                        "file": e.get("original_name", "?"),
-                        "title": e.get("title", "?"),
-                        "score": round(e["_score"], 2),
-                        "duration_sec": e.get("duration_sec", 0),
-                    }
-                    for e in local_matches[:3]
-                ],
-                "youtube": [
-                    {
-                        "title": v["title"],
-                        "url": v["url"],
-                        "score": round(v["_score"], 2),
-                        "duration_sec": v.get("duration_sec", 0),
-                    }
-                    for v in sorted(yt_matches, key=lambda x: x["_score"], reverse=True)[:3]
-                ],
-                "stock": [
-                    {
-                        "title": s["title"],
-                        "url": s["url"],
-                        "source": s["source"],
-                        "duration_sec": s.get("duration_sec", 0),
-                    }
-                    for s in stock_matches[:3]
-                ],
-            },
-            "recommendation": recommendation,
-            "confidence": confidence,
-        }
-        plan_fragments.append(fragment_data)
+        log.info("[Plan] Fragment %d/%d: %s...", i, len(fragments), frag_text[:50])
+        plan_fragments.append(_plan_fragment(i, frag_text, catalog, game))
 
     total = len(fragments)
-    gaps = []
-    shooting_list = []
+    counts = {key: sum(1 for f in plan_fragments if f["recommendation"] == key)
+              for key in ("local", "youtube", "stock", "shoot", "composite")}
 
-    for frag in plan_fragments:
-        if frag["recommendation"] == "shoot":
-            shooting_list.append({
-                "fragment_index": frag["index"],
-                "shot_type": frag["shot_types"][0][0] if frag["shot_types"] else "unknown",
-                "description": frag["text_preview"],
-                "estimated_duration_sec": frag["duration_sec"],
-            })
-        if frag["confidence"] == "low":
-            gaps.append({
-                "fragment_index": frag["index"],
-                "recommendation": frag["recommendation"],
-                "shot_types": [t for t, _ in frag["shot_types"][:2]],
-                "text_preview": frag["text_preview"],
-                "priority": "high" if frag["recommendation"] == "shoot" else "medium",
-            })
+    def share(key: str) -> float:
+        return round(counts[key] / total, 2) if total else 0
 
-    plan = {
+    return {
         "source_file": source_name,
         "game": game,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "total_fragments": total,
-        "total_duration_sec": round(total_duration, 1),
+        "total_duration_sec": round(sum(_estimate_duration_sec(f) for f in fragments), 1),
         "coverage": {
-            "local_catalog": round(coverage_counts["local"] / total, 2) if total else 0,
-            "youtube": round(coverage_counts["youtube"] / total, 2) if total else 0,
-            "stock": round(coverage_counts["stock"] / total, 2) if total else 0,
-            "needs_shooting": round(coverage_counts["shoot"] / total, 2) if total else 0,
-            "composite": round(coverage_counts["composite"] / total, 2) if total else 0,
+            "local_catalog": share("local"),
+            "youtube": share("youtube"),
+            "stock": share("stock"),
+            "needs_shooting": share("shoot"),
+            "composite": share("composite"),
         },
         "fragments": plan_fragments,
-        "gaps": gaps,
-        "shooting_list": shooting_list,
+        "gaps": _gaps(plan_fragments),
+        "shooting_list": _shooting_list(plan_fragments),
     }
-    return plan
+
+
+def _plan_fragment(i: int, frag_text: str, catalog: list[dict], game: str | None) -> dict:
+    """Shot types, candidate sources and the recommended one for one fragment.
+
+    Scores travel in copies (``{**entry, "_score": ...}``): writing them into
+    the catalog entries leaked a ``_score`` key into every later user of the
+    shared catalog list.
+    """
+    duration = _estimate_duration_sec(frag_text)
+    shot_types = classify_fragment(frag_text, game=game)
+
+    local_matches = []
+    if catalog:
+        raw = search_catalog(frag_text, catalog, max_results=config.PLAN_LOCAL_RESULTS)
+        local_matches = [{**e, "_score": _score_local_match(frag_text, e)} for e in raw]
+
+    query = extract_search_query(frag_text)
+    yt_matches = []
+    if query:
+        yt_raw = search_youtube(query, max_results=config.PLAN_YT_RESULTS)
+        yt_matches = [{**v, "_score": _score_youtube_match(query, v)} for v in yt_raw]
+
+    stock_query = extract_stock_query(frag_text, game=game)
+    stock_matches = search_stock(stock_query, max_results=config.PLAN_STOCK_RESULTS)
+
+    recommendation, confidence = _recommend_source(
+        local_matches, yt_matches, stock_matches, shot_types
+    )
+    return {
+        "index": i,
+        "text": frag_text,
+        "text_preview": frag_text[:80] + ("..." if len(frag_text) > 80 else ""),
+        "duration_sec": round(duration, 1),
+        "shot_types": [(t, round(s, 2)) for t, s in shot_types[:3]],
+        "sources": _fragment_sources(local_matches, yt_matches, stock_matches),
+        "recommendation": recommendation,
+        "confidence": confidence,
+    }
+
+
+def _fragment_sources(local_matches: list[dict], yt_matches: list[dict],
+                      stock_matches: list[dict]) -> dict:
+    """The top three candidates per source, as stored in the plan."""
+    return {
+        "local": [
+            {
+                "file": e.get("original_name", "?"),
+                "title": e.get("title", "?"),
+                "score": round(e["_score"], 2),
+                "duration_sec": e.get("duration_sec", 0),
+            }
+            for e in local_matches[:3]
+        ],
+        "youtube": [
+            {
+                "title": v["title"],
+                "url": v["url"],
+                "score": round(v["_score"], 2),
+                "duration_sec": v.get("duration_sec", 0),
+            }
+            for v in sorted(yt_matches, key=lambda x: x["_score"], reverse=True)[:3]
+        ],
+        "stock": [
+            {
+                "title": s["title"],
+                "url": s["url"],
+                "source": s["source"],
+                "duration_sec": s.get("duration_sec", 0),
+            }
+            for s in stock_matches[:3]
+        ],
+    }
+
+
+def _shooting_list(plan_fragments: list[dict]) -> list[dict]:
+    """Fragments nothing covers: what to record, of which shot type, for how long."""
+    return [
+        {
+            "fragment_index": frag["index"],
+            "shot_type": frag["shot_types"][0][0] if frag["shot_types"] else "unknown",
+            "description": frag["text_preview"],
+            "estimated_duration_sec": frag["duration_sec"],
+        }
+        for frag in plan_fragments if frag["recommendation"] == "shoot"
+    ]
+
+
+def _gaps(plan_fragments: list[dict]) -> list[dict]:
+    """Low-confidence fragments; the ones to shoot come first in priority."""
+    return [
+        {
+            "fragment_index": frag["index"],
+            "recommendation": frag["recommendation"],
+            "shot_types": [t for t, _ in frag["shot_types"][:2]],
+            "text_preview": frag["text_preview"],
+            "priority": "high" if frag["recommendation"] == "shoot" else "medium",
+        }
+        for frag in plan_fragments if frag["confidence"] == "low"
+    ]
 
 
 def render_plan_markdown(plan: dict) -> str:
@@ -315,16 +336,16 @@ def save_plan(plan: dict, project: str) -> tuple[Path, Path]:
     return json_path, md_path
 
 
-if __name__ == "__main__":
-    import argparse
-    import sys
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: write the production plan (JSON + Markdown) for a project."""
     ap = argparse.ArgumentParser(
         description="Production plan for projects/<project>/text.md: shot type and duration per "
                     "fragment, coverage from the catalog, YouTube and stock, a shooting list")
     ap.add_argument("project", nargs="?", help="project folder under projects/ (omit to list projects)")
     ap.add_argument("game", nargs="?", help="game key from GAMES (default: detected from the project path)")
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     if not args.project:
         projects = list_projects()
@@ -334,21 +355,19 @@ if __name__ == "__main__":
                 print(f"  - {p}")
         else:
             print(f"No projects in {config.PROJECTS_DIR}")
-        sys.exit(0)
+        return
 
     project = args.project
     game = args.game or _detect_game(project)
     text = read_project_text(project)
 
-    print(f"Generating production plan: {project} ({len(text.split())} words)")
+    log.info("Generating production plan: %s (%d words)", project, len(text.split()))
     if game:
-        print(f"Game: {game}")
-    print()
+        log.info("Game: %s", game)
 
     plan = generate_plan(text, project, game=game)
     json_path, md_path = save_plan(plan, project)
 
-    print()
     print("Plan saved:")
     print(f"  JSON: {json_path}")
     print(f"  MD:   {md_path}")
@@ -360,3 +379,7 @@ if __name__ == "__main__":
           f"stock {cov['stock']:.0%} | "
           f"needs work {cov['needs_shooting'] + cov['composite']:.0%}")
     print(f"Gaps: {len(plan['gaps'])} | Shooting list: {len(plan['shooting_list'])} items")
+
+
+if __name__ == "__main__":
+    main()

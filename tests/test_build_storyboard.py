@@ -110,5 +110,5 @@ def test_load_curation_accepts_both_forms(tmp_path):
 def test_load_curation_rejects_malformed_entries(tmp_path):
     (tmp_path / "curation.json").write_text(json.dumps({"1": ["x.mp4", 5]}),
                                             encoding="utf-8")
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="expected a file name"):
         load_curation(tmp_path)

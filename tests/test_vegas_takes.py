@@ -79,11 +79,11 @@ def test_bad_fps_in_vegas_json_is_refused(tmp_path):
         vegas_takes.parse_vegas_config({"fps": 0}, tmp_path / "vegas.json")
 
 
-def test_layout_fps_comes_from_vegas_json_unless_given(tmp_path, capsys):
+def test_layout_fps_comes_from_vegas_json_unless_given(tmp_path, caplog):
     cfg = vegas_takes.VegasConfig(tmp_path / "vegas.json", 59.94, None, ())
     assert layout.resolve_fps(None, cfg) == 59.94
     assert layout.resolve_fps(60, cfg) == 60
-    assert "overrides" in capsys.readouterr().out
+    assert "overrides" in caplog.text
     with pytest.raises(SystemExit):
         layout.resolve_fps(None, None)
 

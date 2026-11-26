@@ -14,13 +14,24 @@ Both APIs are anonymous and rate-limited politely by a descriptive User-Agent.
 """
 from __future__ import annotations
 
+import argparse
+import logging
 import sys
 
 import requests
 
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
+
 USER_AGENT = "clipmaker-storyboard/0.1 (personal video research)"
 _HEADERS = {"User-Agent": USER_AGENT}
 _TIMEOUT = 20
+
+
+def _get(url: str, params: dict[str, str | int]) -> requests.Response:
+    """GET a MediaWiki API with the descriptive User-Agent and the timeout."""
+    return requests.get(url, params=params, headers=_HEADERS, timeout=_TIMEOUT)
 
 # File extensions worth putting on a timeline. Wikis are full of icon SVGs.
 _RASTER_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
@@ -66,17 +77,16 @@ def fandom_search_pages(
     Searching first turns the query into real titles.
     """
     try:
-        resp = requests.get(
+        resp = _get(
             f"https://{wiki}.fandom.com/api.php",
             params={
                 "action": "query", "list": "search", "srsearch": query,
                 "srlimit": limit, "srnamespace": 0, "format": "json",
             },
-            headers=_HEADERS, timeout=_TIMEOUT,
         )
         resp.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Fandom] Search error for '{query}': {exc}")
+        log.warning("[Fandom] Search error for '%s': %s", query, exc)
         return []
     return [hit["title"] for hit in resp.json().get("query", {}).get("search", [])]
 
@@ -124,17 +134,16 @@ def fandom_page_images(
     api = f"https://{wiki}.fandom.com/api.php"
 
     try:
-        listing = requests.get(
+        listing = _get(
             api,
             params={
                 "action": "query", "titles": page, "prop": "images",
                 "imlimit": limit * 3, "redirects": 1, "format": "json",
             },
-            headers=_HEADERS, timeout=_TIMEOUT,
         )
         listing.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Fandom] Error listing '{page}': {exc}")
+        log.warning("[Fandom] Error listing '%s': %s", page, exc)
         return []
 
     titles = [
@@ -147,18 +156,17 @@ def fandom_page_images(
         return []
 
     try:
-        details = requests.get(
+        details = _get(
             api,
             params={
                 "action": "query", "titles": "|".join(titles[:limit]),
                 "prop": "imageinfo", "iiprop": "url|size",
                 "iiurlwidth": 1280, "format": "json",
             },
-            headers=_HEADERS, timeout=_TIMEOUT,
         )
         details.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Fandom] Error resolving files for '{page}': {exc}")
+        log.warning("[Fandom] Error resolving files for '%s': %s", page, exc)
         return []
 
     results = []
@@ -172,7 +180,7 @@ def fandom_page_images(
 def commons_search(query: str, limit: int = 5, min_width: int = 600) -> list[dict]:
     """Search Wikimedia Commons for still images matching a query."""
     try:
-        resp = requests.get(
+        resp = _get(
             "https://commons.wikimedia.org/w/api.php",
             params={
                 "action": "query", "generator": "search", "gsrsearch": query,
@@ -180,11 +188,10 @@ def commons_search(query: str, limit: int = 5, min_width: int = 600) -> list[dic
                 "prop": "imageinfo", "iiprop": "url|size|extmetadata",
                 "iiurlwidth": 1280, "format": "json",
             },
-            headers=_HEADERS, timeout=_TIMEOUT,
         )
         resp.raise_for_status()
     except requests.RequestException as exc:
-        print(f"[Commons] Error for '{query}': {exc}")
+        log.warning("[Commons] Error for '%s': %s", query, exc)
         return []
 
     results = []
@@ -202,8 +209,6 @@ def commons_search(query: str, limit: int = 5, min_width: int = 600) -> list[dic
 
 def main(argv: list[str] | None = None) -> None:
     """CLI: ``fandom QUERY --wiki eveonline`` | ``commons QUERY``."""
-    import argparse
-
     parser = argparse.ArgumentParser(prog="clipmaker.image_search")
     parser.add_argument("provider", choices=("fandom", "commons"))
     parser.add_argument("query", nargs="+")
@@ -211,7 +216,9 @@ def main(argv: list[str] | None = None) -> None:
                         help="Fandom subdomain: eveonline, wowpedia, diablo, ...")
     parser.add_argument("--limit", type=int, default=6)
     parser.add_argument("--min-width", type=int, default=600)
+    add_verbose_flag(parser)
     args = parser.parse_args(argv)
+    setup_logging(args.verbose)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 

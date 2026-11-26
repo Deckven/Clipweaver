@@ -44,20 +44,20 @@ def test_entries_carry_game_and_posix_catalog_path(games):
     assert e["_game"] == "g1" and e["_catalog_path"] == "g1_videos/sub/a.json"
 
 
-def test_unreadable_file_is_reported_once(games, capsys):
+def test_unreadable_file_is_reported_once(games, caplog):
     (games / "g1_videos" / "broken.json").write_text("{not json", encoding="utf-8")
     write(games, "g1_videos/ok.json", entry("ok.mp4"))
     assert [e["original_name"] for e in catalog.load_entries(["g1"])] == ["ok.mp4"]
     catalog.load_entries(["g1"])
-    assert capsys.readouterr().out.count("broken.json") == 1
+    assert caplog.text.count("broken.json") == 1
 
 
-def test_name_clash_keeps_first_game_and_says_so(games, capsys):
+def test_name_clash_keeps_first_game_and_says_so(games, caplog):
     write(games, "g1_videos/k.json", entry("keynote.mp4", source_path="/footage/one/keynote.mp4"))
     write(games, "g2_videos/k.json", entry("keynote.mp4", source_path="/footage/two/keynote.mp4"))
     index = catalog.load_index(["g1", "g2"])
     assert index["keynote.mp4"]["source_path"] == "/footage/one/keynote.mp4"
-    out = capsys.readouterr().out
+    out = caplog.text
     assert "g1_videos/k.json (used)" in out and "g2_videos/k.json (ignored)" in out
 
 

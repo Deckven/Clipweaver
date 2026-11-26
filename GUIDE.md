@@ -48,7 +48,13 @@ It does not edit the video, choose music or judge pacing.
 | Pexels / Pixabay API keys | stock footage in `production_plan` | optional |
 
 Install and configure as in the [README](README.md#install): torch first, then
-`pip install -e ".[all,test]"`, then `cp .env.example .env`.
+`pip install -e ".[all,test]"`, then `cp .env.example .env`. Every command below
+also runs as `clipweaver <module> ...` (e.g. `clipweaver align <project>`), and
+takes `-v/--verbose` for debug messages.
+
+Where data lives: in a clone (or an editable install) next to the code, so
+`catalog/`, `projects/` and `.env` sit in the repository root; with a regular
+`pip install .`, in the folder you run from, or in `CLIPMAKER_HOME` when set.
 
 ## 3. Folders and files
 
@@ -285,6 +291,17 @@ python -m clipmaker.align <project>
 Finds where each fragment is spoken and writes `timings_v1.json`. A warning
 `WEAK ANCHORS on fragments …` means the recording differs from `text.md` there
 (an ad-lib, a rewrite) — check those fragments.
+
+Limits of the alignment (`difflib.SequenceMatcher` over the whole script and the
+whole transcript as two word sequences, no junk heuristic):
+
+- **Order.** It finds a common subsequence, so it assumes you read `text.md` in
+  order. A paragraph recorded out of place does not move; it comes out as a weak
+  or unmatched anchor. Reorder `text.md` to match the recording.
+- **Length.** Time grows roughly with the square of the word count: about 0.1 s
+  for 4,500 words and 1.2 s for 18,000 (two hours of narration at 150 words per
+  minute), measured on a laptop CPU. Longer recordings work but slow down quickly;
+  split them into parts first.
 
 ### Step 8. Final timings
 

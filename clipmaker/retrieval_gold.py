@@ -59,6 +59,7 @@ def clean_label(label: str) -> str:
 
 
 def label_fragment(label: str) -> int | None:
+    """Fragment number from a layout label that starts with "фр 12", or None."""
     m = re.match(r"\s*фр\s*(\d+)", label or "")
     return int(m.group(1)) if m else None
 
@@ -70,6 +71,7 @@ def _pick(name: str, start: float, end: float, known: set[str]) -> dict:
 
 
 def items_from_shots(video: str, shots: dict, curation: dict, known: set[str]) -> list[dict]:
+    """Gold items of a storyboard video: shots.json queries against curation.json picks."""
     items = []
     for frag in sorted((k for k in curation if k.isdigit()), key=int):
         name, start, end = curation[frag][:3]
@@ -82,6 +84,7 @@ def items_from_shots(video: str, shots: dict, curation: dict, known: set[str]) -
 
 
 def items_from_events(video: str, events: list[dict], known: set[str]) -> list[dict]:
+    """Gold items of a video placed by events: each label is a query, its clip the pick."""
     groups: dict[str, dict] = {}
     for idx, ev in enumerate(events, 1):
         query = clean_label(ev.get("label", ""))
@@ -107,7 +110,9 @@ def _git_ref(path: Path) -> str:
 
 
 def build_gold(projects_dir: Path, catalog_dir: Path) -> dict:
-    videos, items = [], []
+    """The gold set from every finished video listed in SOURCES."""
+    videos: list[dict] = []
+    items: list[dict] = []
     for src in load_sources():
         project = Path(projects_dir) / src["project"]
         known = {name_key(e["original_name"]) for e in load_entries(catalog_dir, src["game"])}
@@ -156,12 +161,14 @@ def merge_reviews(new: dict, old: dict | None) -> dict:
 
 
 def load_gold(path: Path) -> dict | None:
+    """The gold set YAML, or None if it does not exist yet."""
     if not Path(path).exists():
         return None
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
 
 def save_gold(path: Path, gold: dict) -> None:
+    """Write the gold set YAML with its explanatory header."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     header = ("# Retrieval gold set — built by `python -m clipmaker.retrieval_eval gold`.\n"
               "# status: unreviewed | ok | wrong (set from eval/retrieval_review.md by apply-review).\n"
@@ -209,6 +216,7 @@ def _found(ranks: dict | None) -> str:
 
 
 def render_sheet(gold: dict, results: dict | None = None) -> str:
+    """The review sheet: one row per item to mark ok or wrong."""
     ranks = {r["id"]: r["ranks"] for r in (results or {}).get("items", [])}
     items = [it for it in gold["items"] if any(p["in_catalog"] for p in it["picks"])]
     skipped = len(gold["items"]) - len(items)
@@ -258,7 +266,7 @@ def _split_row(line: str) -> list[str]:
 def parse_sheet(text: str) -> dict[str, tuple[str, bool]]:
     """id → (mark, section reviewed?) for every item row of the sheet."""
     marks: dict[str, tuple[str, bool]] = {}
-    section: list[str] = []
+    section: list[tuple[str, str]] = []
     reviewed = False
     for line in text.splitlines() + ["## end"]:
         if line.startswith("## "):

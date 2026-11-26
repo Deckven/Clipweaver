@@ -12,12 +12,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from pathlib import Path
 from difflib import SequenceMatcher
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 # Below this share of matched words a fragment's anchor is flagged: the start
 # may be right, but nothing in the transcript proves it.
@@ -52,6 +56,7 @@ def _fragment_quote(block: str) -> str:
 
 
 def parse_storyboard(path: Path) -> list[dict]:
+    """Fragments of a storyboard.md: number, narration quote and listed videos."""
     text = path.read_text(encoding="utf-8")
     fragments = []
     for block in re.split(r"^## Fragment (\d+)", text, flags=re.MULTILINE):
@@ -73,6 +78,44 @@ def _normalize(text: str) -> str:
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
     return " ".join(text.split())
+
+
+def load_transcript(path: Path) -> list[dict]:
+    """Segments of a transcript.json: a list, or an object with "segments".
+
+    Each segment needs numeric start/end and a text; "words" (Whisper word
+    timestamps) is optional but must carry word and start when present. A
+    ValueError names the segment, where a KeyError deep inside the alignment
+    said nothing about which file was wrong.
+    """
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} is not valid JSON: {exc}") from exc
+    segments = raw.get("segments") if isinstance(raw, dict) else raw
+    if not isinstance(segments, list):
+        raise ValueError(f"{path}: expected a list of segments or an object with "
+                         f"\"segments\", got {type(raw).__name__}")
+    for i, seg in enumerate(segments):
+        _check_segment(seg, f"{path.name} segment {i}")
+    return segments
+
+
+def _check_segment(seg: object, where: str) -> None:
+    """ValueError unless seg is a transcript segment the aligner can read."""
+    if not isinstance(seg, dict):
+        raise ValueError(f"{where}: expected an object, got {seg!r}")
+    for key in ("start", "end"):
+        if isinstance(seg.get(key), bool) or not isinstance(seg.get(key), (int, float)):
+            raise ValueError(f"{where}: {key!r} must be a number of seconds, got {seg.get(key)!r}")
+    if seg["end"] < seg["start"]:
+        raise ValueError(f"{where}: ends ({seg['end']}) before it starts ({seg['start']})")
+    if not isinstance(seg.get("text"), str):
+        raise ValueError(f"{where}: missing \"text\"")
+    for w in seg.get("words") or []:
+        if not (isinstance(w, dict) and isinstance(w.get("word"), str)
+                and isinstance(w.get("start"), (int, float))):
+            raise ValueError(f"{where}: bad word entry {w!r} (needs word and start)")
 
 
 def transcript_words(segments: list[dict]) -> tuple[list[str], list[float]]:
@@ -143,7 +186,7 @@ def anchor_starts(frag_texts: list[str],
 
     starts: list[float] = []
     stats: list[dict] = []
-    for offset, frag_end in zip(frag_offsets, frag_ends):
+    for offset, frag_end in zip(frag_offsets, frag_ends, strict=True):
         spoken_idx = len(spoken_times) - 1
         anchor = "unmatched"
         for block in blocks:
@@ -169,34 +212,38 @@ def anchor_starts(frag_texts: list[str],
     return starts, stats
 
 
+def _preview(text: str, width: int = 60) -> str:
+    """The start of a text, with "..." only when something was cut."""
+    return text if len(text) <= width else text[:width] + "..."
+
+
 def fmt_ts(sec: float) -> str:
+    """Seconds as HH:MM:SS."""
     m, s = divmod(int(sec), 60)
     h, m = divmod(m, 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def align(project: str):
+def align(project: str) -> Path:
+    """Anchor each storyboard fragment in the narration transcript and write
+    timings_v1.json; returns its path. FileNotFoundError if an input is missing."""
     # Never config.get_project_dir here: it creates the folder, and a mistyped
     # name used to leave stray directories like projects/--project behind.
     project_dir = config.project_path(project)
     if not project_dir.is_dir():
-        print(f"No project folder {project_dir}")
-        sys.exit(1)
+        raise FileNotFoundError(f"No project folder {project_dir}")
     storyboard_path = project_dir / "storyboard.md"
     transcript_path = project_dir / "transcript.json"
     out_path = project_dir / "timings_v1.json"
 
     if not storyboard_path.exists():
-        print(f"No storyboard.md in {project_dir}")
-        sys.exit(1)
+        raise FileNotFoundError(f"No storyboard.md in {project_dir}")
     if not transcript_path.exists():
-        print(f"No transcript.json in {project_dir}")
-        sys.exit(1)
+        raise FileNotFoundError(f"No transcript.json in {project_dir}")
 
     fragments = parse_storyboard(storyboard_path)
-    raw = json.loads(transcript_path.read_text(encoding="utf-8"))
-    segments = raw["segments"] if isinstance(raw, dict) and "segments" in raw else raw
-    print(f"Fragments: {len(fragments)}, Transcript segments: {len(segments)}")
+    segments = load_transcript(transcript_path)
+    log.info("Fragments: %d, Transcript segments: %d", len(fragments), len(segments))
 
     spoken = [f for f in fragments if f["text"]]
 
@@ -212,7 +259,7 @@ def align(project: str):
         start = starts[i]
         end = starts[i + 1] if i + 1 < len(spoken) else transcript_end
         if end <= start:  # degenerate anchor — fall back to a wpm estimate
-            end = start + len(frag["text"].split()) / 150 * 60
+            end = start + len(frag["text"].split()) / config.WORDS_PER_MIN_RU * 60
         dur = end - start
         stat = stats[i]
         timings.append({
@@ -225,29 +272,35 @@ def align(project: str):
             "match_ratio": stat["match_ratio"],
             "anchor": stat["anchor"],
             "videos": frag["videos"],
-            "text_preview": frag["text"][:60] + "...",
+            "text_preview": _preview(frag["text"]),
         })
         flag = ""
         if stat["match_ratio"] < WEAK_MATCH_RATIO or stat["anchor"] == "unmatched":
             weak.append(frag["num"])
             flag = f"  <-- WEAK ({stat['anchor']}, {stat['match_ratio']:.0%} matched)"
-        print(f"  Frag {frag['num']:2d}: {fmt_ts(start)} - {fmt_ts(end)} "
-              f"({dur:.0f}s) {frag['text'][:50]}{flag}")
+        log.info("Frag %2d: %s - %s (%.0fs) %s%s", frag["num"], fmt_ts(start),
+                 fmt_ts(end), dur, frag["text"][:50], flag)
 
     out_path.write_text(json.dumps(timings, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\nSaved {len(timings)} fragment timings to {out_path}")
+    log.info("Saved %d fragment timings to %s", len(timings), out_path)
     if weak:
-        print(f"WEAK ANCHORS on fragments {weak}: the transcript matched under "
-              f"{WEAK_MATCH_RATIO:.0%} of their words. Their starts (and the "
-              f"previous fragments' ends) are guesses — check these rows on the "
-              f"contact sheet, or the mp3 may be an older draft of the text "
-              f"(a known failure: identical timings in a run mean unvoiced text).")
+        log.warning("WEAK ANCHORS on fragments %s: the transcript matched under "
+                    "%.0f%% of their words. Their starts (and the previous fragments' "
+                    "ends) are guesses - check these rows on the contact sheet, or the "
+                    "mp3 may be an older draft of the text (a known failure: identical "
+                    "timings in a run mean unvoiced text).", weak, WEAK_MATCH_RATIO * 100)
+    return out_path
 
 
 def parse_args(argv: list[str] | None = None) -> str:
     """Project from either the positional argument or --project (the form the
     other CLIs use). Both given must agree; a missing project is an error, not
     a silent default."""
+    return _parse(argv)[0]
+
+
+def _parse(argv: list[str] | None) -> tuple[str, bool]:
+    """(project, verbose) from the command line."""
     ap = argparse.ArgumentParser(
         prog="clipmaker.align",
         description="Align storyboard fragments to the narration transcript "
@@ -255,17 +308,25 @@ def parse_args(argv: list[str] | None = None) -> str:
     ap.add_argument("project_pos", nargs="?", metavar="project",
                     help="project folder under projects/, e.g. my_game/drafts/<slug>")
     ap.add_argument("--project", default=None, help="same as the positional argument")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
     if args.project and args.project_pos and args.project != args.project_pos:
         ap.error(f"two different projects given: {args.project_pos!r} and {args.project!r}")
     project = args.project or args.project_pos
     if not project:
         ap.error("no project given")
-    return project
+    return project, args.verbose
 
 
 def main(argv: list[str] | None = None) -> None:
-    align(parse_args(argv))
+    """CLI: align a project's storyboard to its transcript."""
+    project, verbose = _parse(argv)
+    setup_logging(verbose)
+    try:
+        print(f"Timings: {align(project)}")
+    except (FileNotFoundError, ValueError) as exc:
+        log.error("%s", exc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

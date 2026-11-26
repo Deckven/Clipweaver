@@ -28,6 +28,8 @@ import sys
 from pathlib import Path
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
 
 MIN_RUN = 3
 LONGER_SLACK_SEC = 0.5
@@ -37,6 +39,7 @@ _NON_WORD = re.compile(r"[^\w]")
 
 
 def normalize_word(word: str) -> str:
+    """Lowercase, e for yo, punctuation dropped: the form words are matched in."""
     return _NON_WORD.sub("", word.lower().replace("ё", "е"))
 
 
@@ -53,6 +56,7 @@ def transcript_words(data: dict | list) -> list[tuple[str, float]]:
 
 
 def transcript_end(data: dict | list) -> float:
+    """Last segment end of a transcript (dict with segments, or the list itself)."""
     segments = data["segments"] if isinstance(data, dict) else data
     return max((float(s["end"]) for s in segments), default=0.0)
 
@@ -90,7 +94,7 @@ def remap_events(events: list[dict], pairs: list[tuple[float, float]],
         new_start, near = map_time(float(e["start_sec"]), pairs)
         starts.append((round(new_start, 2), near))
     rows = []
-    for k, (e, (new_start, near)) in enumerate(zip(ordered, starts)):
+    for k, (e, (new_start, near)) in enumerate(zip(ordered, starts, strict=True)):
         nxt = starts[k + 1][0] if k + 1 < len(starts) else new_end
         rows.append({**e,
                      "new_start_sec": new_start,
@@ -101,6 +105,7 @@ def remap_events(events: list[dict], pairs: list[tuple[float, float]],
 
 
 def row_flags(row: dict) -> str:
+    """Warnings for one remapped event: longer, too short, no anchor nearby."""
     flags = ""
     if row["new_len_sec"] > row["old_len_sec"] + LONGER_SLACK_SEC:
         flags += f" LONGER+{row['new_len_sec'] - row['old_len_sec']:.1f}"
@@ -120,6 +125,7 @@ def _load_json(path: Path):
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: move Vegas events from an old narration onto a re-voiced one."""
     ap = argparse.ArgumentParser(prog="clipmaker.remap", description=__doc__.split("\n")[0])
     ap.add_argument("--project", required=True)
     ap.add_argument("--old", required=True, help="word-level transcript of the old narration")
@@ -130,7 +136,9 @@ def main(argv: list[str] | None = None) -> None:
                     help="shortest identical word run used as an anchor (default %(default)s)")
     ap.add_argument("--new-end", type=float, default=None,
                     help="end of the new narration, s (default: transcript end)")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     project_dir = config.PROJECTS_DIR / args.project
     if not project_dir.is_dir():

@@ -24,10 +24,10 @@ def test_empty_ollama_reply_is_not_cached(monkeypatch):
     assert not config.SHOT_QUERY_CACHE.exists()
 
 
-def test_unreachable_ollama_is_said_once(monkeypatch, capsys):
+def test_unreachable_ollama_is_said_once(monkeypatch, caplog):
     monkeypatch.setattr(config, "OLLAMA_URL", "http://127.0.0.1:9/api/chat")
     monkeypatch.setattr(config, "SHOT_QUERY_TIMEOUT", 2)
     monkeypatch.setattr(shot_query, "_warned", set())
     for frag in ("first fragment", "second fragment"):
         assert shot_query.build_shot_queries(frag, use_cache=False)[0].source == "fragment"
-    assert capsys.readouterr().out.count("did not answer") == 1
+    assert caplog.text.count("did not answer") == 1

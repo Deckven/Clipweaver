@@ -26,11 +26,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from . import config
 from . import catalog as _catalog
+from .align import load_transcript
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 CLIP_PAD_SEC = 5.0
 
@@ -40,25 +45,55 @@ CLIP_PAD_SEC = 5.0
 # ---------------------------------------------------------------------------
 
 def load_curation(project_dir: Path) -> dict[int, tuple[str, float | None, float | None]]:
-    """``curation.json``: {"<fragment>": "video.mp4"} or ["video.mp4", start, end]."""
+    """``curation.json``: {"<fragment>": "video.mp4"} or ["video.mp4", start, end].
+
+    Hand-edited, so every entry is checked: a ValueError names the file, the
+    fragment and what is wrong, instead of a KeyError or a negative-length cut
+    surfacing three steps later in clip_extractor or the Vegas loader.
+    """
     path = project_dir / "curation.json"
     if not path.exists():
         return {}
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    curation: dict[int, tuple[str, float | None, float | None]] = {}
-    for key, spec in raw.items():
-        num = int(key)
-        if isinstance(spec, str):
-            curation[num] = (spec, None, None)
-        elif isinstance(spec, list) and len(spec) == 3:
-            curation[num] = (spec[0], float(spec[1]), float(spec[2]))
-        else:
-            sys.exit(f"curation.json fragment {key}: expected a file name or "
-                     f"[name, start, end], got {spec!r}")
-    return curation
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} is not valid JSON: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError(f"{path}: expected an object of fragment -> video, got {type(raw).__name__}")
+    return {_fragment_number(key, path): _curation_entry(key, spec)
+            for key, spec in raw.items()}
+
+
+def _fragment_number(key: str, path: Path) -> int:
+    """A curation key as a fragment number; ValueError for anything else."""
+    if not key.strip().isdigit() or int(key) < 1:
+        raise ValueError(f"{path}: key {key!r} is not a fragment number (\"1\", \"2\", ...)")
+    return int(key)
+
+
+def _curation_entry(key: str, spec: object) -> tuple[str, float | None, float | None]:
+    """(video, start, end) of one curation entry, checked."""
+    where = f"curation.json fragment {key}"
+    if isinstance(spec, str):
+        if not spec.strip():
+            raise ValueError(f"{where}: empty file name")
+        return spec, None, None
+    if not (isinstance(spec, list) and len(spec) == 3):
+        raise ValueError(f"{where}: expected a file name or [name, start, end], got {spec!r}")
+    name, start, end = spec
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError(f"{where}: the first item must be the video file name, got {name!r}")
+    for label, value in (("start", start), ("end", end)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{where}: {label} must be a number of seconds, got {value!r}")
+    if start < 0 or end <= start:
+        raise ValueError(f"{where}: range {start}-{end} s is empty or negative; "
+                         "the end must come after the start")
+    return name, float(start), float(end)
 
 
 def load_moments(project_dir: Path) -> dict[int, list[dict]]:
+    """Semantic candidates per fragment from the project's moments.json ({} if absent)."""
     path = project_dir / "moments.json"
     if not path.exists():
         return {}
@@ -152,6 +187,7 @@ def choose_clip(num: int, frag_dur: float,
 # ---------------------------------------------------------------------------
 
 def get_transcript_for_range(segments: list[dict], start_sec: float, end_sec: float) -> str:
+    """Transcript text of the segments overlapping [start_sec, end_sec]."""
     parts = []
     for seg in segments:
         if seg["end"] < start_sec:
@@ -163,35 +199,34 @@ def get_transcript_for_range(segments: list[dict], start_sec: float, end_sec: fl
 
 
 def fmt_ts(sec: float) -> str:
+    """Seconds as HH:MM:SS."""
     m, s = divmod(int(sec), 60)
     h, m = divmod(m, 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def main(project: str) -> None:
+def run(project: str) -> Path:
+    """Merge curation, semantic moments and audio anchors into timings.json; returns its path."""
     project_dir = config.project_path(project)
     timings_v1_path = project_dir / "timings_v1.json"
     transcript_path = project_dir / "transcript.json"
     out_path = project_dir / "timings.json"
 
     if not timings_v1_path.exists():
-        sys.exit(f"No timings_v1.json in {project_dir} — run align first.")
+        raise FileNotFoundError(f"No timings_v1.json in {project_dir} - run align first.")
 
     timings_v1 = json.loads(timings_v1_path.read_text(encoding="utf-8"))
     curation = load_curation(project_dir)
     moments = load_moments(project_dir)
     catalog = load_catalog_index()
 
-    transcript_segs: list[dict] = []
-    if transcript_path.exists():
-        raw = json.loads(transcript_path.read_text(encoding="utf-8"))
-        transcript_segs = raw["segments"] if isinstance(raw, dict) and "segments" in raw else raw
+    transcript_segs = load_transcript(transcript_path) if transcript_path.exists() else []
 
     if not curation and not moments:
-        print("WARNING: neither curation.json nor moments.json in the project — "
-              "every fragment will be uncovered.")
-    print(f"Fragments: {len(timings_v1)}, curated: {len(curation)}, "
-          f"with semantic moments: {len(moments)}, catalog: {len(catalog)} videos")
+        log.warning("neither curation.json nor moments.json in the project - "
+                    "every fragment will be uncovered.")
+    log.info("Fragments: %d, curated: %d, with semantic moments: %d, catalog: %d videos",
+             len(timings_v1), len(curation), len(moments), len(catalog))
 
     results = []
     for t in timings_v1:
@@ -204,7 +239,7 @@ def main(project: str) -> None:
         video_name = choice.get("primary_video")
         entry = catalog.get(video_name, {}) if video_name else {}
         if video_name and video_name not in catalog:
-            print(f"  Frag {num:2d} WARNING: {video_name} not in catalog!")
+            log.warning("Frag %2d: %s not in catalog!", num, video_name)
 
         transcript_text = get_transcript_for_range(transcript_segs, start_sec, end_sec)
         result = {
@@ -224,22 +259,35 @@ def main(project: str) -> None:
 
         range_label = (f"{choice.get('clip_start')}-{choice.get('clip_end')}s"
                        if "clip_start" in choice else "no range")
-        print(f"  Frag {num:2d} [{fmt_ts(start_sec)}-{fmt_ts(end_sec)}] "
-              f"{choice.get('clip_source') or 'UNCOVERED':<15} {range_label:<18} "
-              f"{ascii((video_name or '-')[:50])}")
+        log.info("Frag %2d [%s-%s] %-15s %-18s %s", num, fmt_ts(start_sec), fmt_ts(end_sec),
+                 choice.get("clip_source") or "UNCOVERED", range_label,
+                 ascii((video_name or "-")[:50]))
 
     out_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     covered = sum(1 for r in results if r.get("primary_video"))
-    print(f"\nSaved {len(results)} fragments to {out_path} "
-          f"({covered} covered, {len(results) - covered} uncovered)")
+    log.info("Saved %d fragments to %s (%d covered, %d uncovered)",
+             len(results), out_path, covered, len(results) - covered)
+    return out_path
+
+
+def main(argv: list[str] | None = None) -> None:
+    """CLI: build a project's timings.json."""
+    ap = argparse.ArgumentParser(description="Merge curation.json, moments.json and "
+                                 "timings_v1.json into timings.json")
+    ap.add_argument("--project", default=None)
+    ap.add_argument("project_pos", nargs="?", help="project name (positional)")
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
+    name = args.project or args.project_pos
+    if not name:
+        ap.error("no project given: python -m clipmaker.build_storyboard --project <name>")
+    try:
+        print(f"Timings: {run(name)}")
+    except (FileNotFoundError, ValueError) as exc:
+        log.error("%s", exc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--project", default=None)
-    ap.add_argument("project_pos", nargs="?", help="project name (positional)")
-    args = ap.parse_args()
-    name = args.project or args.project_pos
-    if not name:
-        sys.exit("Usage: python -m clipmaker.build_storyboard --project <name>")
-    main(name)
+    main()

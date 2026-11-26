@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from clipmaker import analyzer
+from clipmaker import analyzer, naming, vlm
 
 
 GAME = "dry_run_game"
@@ -33,7 +33,7 @@ def setup(tmp_path, monkeypatch):
         raise AssertionError("dry run did real work")
 
     monkeypatch.setattr(analyzer, "analyze_video", boom)
-    monkeypatch.setattr(analyzer, "load_vlm", boom)
+    monkeypatch.setattr(vlm, "load_vlm", boom)
     monkeypatch.setattr(analyzer, "_cuda_available", boom)
 
     (videos / "new clip.mp4").write_bytes(b"")
@@ -70,7 +70,7 @@ def test_dry_run_with_force_counts_cached_videos_too(setup, capsys):
 
 def test_dry_run_regenerate_suggestions_writes_nothing(setup, monkeypatch, capsys):
     _, cat_root = setup
-    monkeypatch.setattr(analyzer, "suggest_filename", lambda rec, orig: "new.mp4")
+    monkeypatch.setattr(naming, "suggest_filename", lambda rec, orig: "new.mp4")
     cached = cat_root / f"{GAME}_videos" / "cached clip.json"
     before = cached.read_text(encoding="utf-8")
 

@@ -23,6 +23,8 @@ from pathlib import Path
 import numpy as np
 
 from . import config
+from .log import add_verbose_flag, setup_logging
+
 
 TICKS_PER_SEC = 10_000_000
 TOLERANCE_SEC = 1.0
@@ -70,6 +72,7 @@ def expected_from_takes(takes: list[dict]) -> dict[str, float]:
 
 
 def parse_lag_arg(item: str) -> tuple[str, float]:
+    """NAME=SECONDS from a --lag argument."""
     name, sep, value = item.rpartition("=")
     if not sep or not name:
         raise ValueError(f"--lag wants NAME=SECONDS, got {item!r}")
@@ -77,13 +80,16 @@ def parse_lag_arg(item: str) -> tuple[str, float]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: check measured take lags against a .veg project."""
     ap = argparse.ArgumentParser(prog="clipmaker.veg_scan", description=__doc__.split("\n")[0])
     ap.add_argument("veg", type=Path)
     ap.add_argument("--project", default=None, help="read take lags from <project>/vegas.json")
     ap.add_argument("--lag", action="append", default=[], help="NAME=SECONDS (repeatable)")
     ap.add_argument("--tolerance", type=float, default=TOLERANCE_SEC,
                     help="search window around each expected position, s")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     try:
         expected = dict(parse_lag_arg(x) for x in args.lag)

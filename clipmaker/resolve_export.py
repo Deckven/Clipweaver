@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -34,6 +35,9 @@ from fractions import Fraction
 from pathlib import Path
 
 from . import catalog, config
+from .log import add_verbose_flag, setup_logging
+
+log = logging.getLogger(__name__)
 
 STILL_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 OVERLAY_SUBPATH = Path("overlays") / "layout.txt"
@@ -46,6 +50,7 @@ _NTSC = {23.976: Fraction(24000, 1001), 29.97: Fraction(30000, 1001), 59.94: Fra
 
 @dataclass(frozen=True)
 class Event:
+    """One layout.txt event, times in milliseconds."""
     start_ms: int
     length_ms: int
     offset_ms: int
@@ -55,6 +60,7 @@ class Event:
 
 @dataclass(frozen=True)
 class TrackLayout:
+    """A parsed layout.txt: track name, fps, fade length, narration and events."""
     name: str
     fps: float
     fade_ms: int
@@ -101,6 +107,7 @@ def parse_layout(path: Path) -> TrackLayout:
 
 
 def timeline_rate(fps: float) -> Fraction:
+    """Exact timeline rate for an fps (59.94 -> 60000/1001)."""
     for nominal, exact in _NTSC.items():
         if abs(fps - nominal) < 0.01:
             return exact
@@ -113,6 +120,7 @@ def timeline_rate(fps: float) -> Fraction:
 
 @dataclass(frozen=True)
 class Media:
+    """What ffprobe says about a media file: rate, duration, video and audio streams."""
     path: Path
     rate: Fraction | None        # None for stills
     duration: Fraction | None    # seconds; None for stills
@@ -121,6 +129,7 @@ class Media:
 
     @property
     def still(self) -> bool:
+        """True for an image: video without a frame rate."""
         return self.rate is None and self.has_video
 
 
@@ -175,6 +184,7 @@ def probe_media(path: Path) -> Media:
 
 @dataclass(frozen=True)
 class Placed:
+    """An event converted to timeline frames, with its source in-point and fades."""
     label: str
     media: Media
     start_f: int           # timeline frames
@@ -218,6 +228,7 @@ def place_track(layout: TrackLayout, rate: Fraction, media: dict[Path, Media]) -
 
 def build_otio(name: str, rate: Fraction, video: list[tuple[str, list[Placed]]],
                narration: Media | None):
+    """The timeline as an OpenTimelineIO object: video tracks plus the narration."""
     import opentimelineio as otio
 
     r = float(rate)
@@ -284,6 +295,7 @@ def _t(seconds: Fraction) -> str:
 
 def build_fcpxml(name: str, rate: Fraction, video: list[tuple[str, list[Placed]]],
                  narration: Media | None) -> str:
+    """The timeline as FCPXML 1.9 text for DaVinci Resolve."""
     frame = 1 / rate
     root = ET.Element("fcpxml", version="1.9")
     resources = ET.SubElement(root, "resources")
@@ -300,21 +312,21 @@ def build_fcpxml(name: str, rate: Fraction, video: list[tuple[str, list[Placed]]
                 attrs["frameDuration"] = _t(1 / key)
             else:
                 attrs["name"] = "FFVideoFormatRateUndefined"
-            ET.SubElement(resources, "format", **attrs)
+            ET.SubElement(resources, "format", attrs)
         return formats[key]
 
     def asset_id(m: Media) -> str:
         if m.path not in assets:
             assets[m.path] = f"a{len(assets) + 1}"
             attrs = {"id": assets[m.path], "name": m.path.stem, "start": "0s",
-                     "duration": _t(m.duration or 0),
+                     "duration": _t(m.duration or Fraction(0)),
                      "hasVideo": "1" if m.has_video else "0",
                      "hasAudio": "1" if m.has_audio else "0"}
             if m.has_video:
                 attrs["format"] = format_id(m)
             if m.has_audio:
                 attrs.update(audioSources="1", audioChannels="2", audioRate="48000")
-            asset = ET.SubElement(resources, "asset", **attrs)
+            asset = ET.SubElement(resources, "asset", attrs)
             ET.SubElement(asset, "media-rep", kind="original-media", src=m.path.resolve().as_uri())
         return assets[m.path]
 
@@ -363,6 +375,7 @@ def build_fcpxml(name: str, rate: Fraction, video: list[tuple[str, list[Placed]]
 # --------------------------------------------------------------------------
 
 def export_project(project: str, probe=probe_media) -> tuple[Path, Path]:
+    """Write resolve/<name>.otio and .fcpxml from the project's layout files; returns both paths."""
     project_dir = config.project_path(project)
     main = project_dir / "layout.txt"
     if not main.is_file():
@@ -387,7 +400,7 @@ def export_project(project: str, probe=probe_media) -> tuple[Path, Path]:
     if audio_path and audio_path.is_file():
         narration = probe(audio_path)
     else:
-        print(f"[resolve] narration {layouts[0].audio!r} not in {project_dir}; no audio track")
+        log.warning("[resolve] narration %r not in %s; no audio track", layouts[0].audio, project_dir)
 
     name = Path(project).name
     out_dir = project_dir / "resolve"
@@ -400,11 +413,14 @@ def export_project(project: str, probe=probe_media) -> tuple[Path, Path]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI: export a project's layout to DaVinci Resolve."""
     ap = argparse.ArgumentParser(
         description="Export projects/<project>/layout.txt (+ overlays/layout.txt) to "
                     "DaVinci Resolve: resolve/<name>.otio and resolve/<name>.fcpxml")
     ap.add_argument("project", help="project folder under projects/")
+    add_verbose_flag(ap)
     args = ap.parse_args(argv)
+    setup_logging(args.verbose)
     try:
         import opentimelineio  # noqa: F401
     except ImportError:

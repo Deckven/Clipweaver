@@ -4,20 +4,26 @@ writes a storyboard document into the project folder.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import logging
 import re
+import sys
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
 from . import config, embed_index, image_search, shot_query
 from . import catalog as _catalog
+from .log import add_verbose_flag, setup_logging
 from .youtube_search import (
     split_into_paragraphs,
     extract_search_query,
     search_youtube,
     format_view_count,
 )
+
+log = logging.getLogger(__name__)
 
 
 def _as_games(game: str | list[str] | None) -> list[str]:
@@ -102,7 +108,8 @@ def _best_hits_across_queries(
     for query in queries:
         merged: dict[str, embed_index.Hit] = {}
         # A written query that names its game searches that catalog only.
-        for game in ([query.game] if query.game else (games or [None])):
+        scopes: list[str | None] = [query.game] if query.game else (list(games or []) or [None])
+        for game in scopes:
             for hit in embed_index.search(query.text, k=max_results, game=game):
                 tagged = replace(hit, query=query.text if query.source != "fragment" else "")
                 current = merged.get(hit.catalog_path)
@@ -135,7 +142,7 @@ def _semantic_search(
     fragment: str, catalog: list[dict], max_results: int,
     game: str | list[str] | None,
     shots: list[shot_query.ShotQuery] | None = None,
-) -> list[tuple[dict, embed_index.Hit]] | None:
+) -> list[tuple[dict, embed_index.Hit | None]] | None:
     """Match through the embedding index, resolving hits back to catalog entries.
 
     The fragment is first rewritten into visual shot descriptions — embedding a
@@ -174,7 +181,7 @@ def _semantic_search(
     }
     by_name = {e.get("original_name", ""): e for e in catalog if e.get("original_name")}
 
-    pairs = []
+    pairs: list[tuple[dict, embed_index.Hit | None]] = []
     for hit in hits:
         entry = by_path.get(_normalize_path(hit.catalog_path)) or by_name.get(hit.original_name)
         if entry is not None:
@@ -395,17 +402,47 @@ def generate_report(
 
     query_overrides = query_overrides or {}
     written_shots = written_shots or {}
-    beyond = sorted(n for n in written_shots if n > len(fragments))
-    if beyond:
-        # Numbered against another split of the text: every query would land on
-        # the wrong paragraph, so refuse instead of searching with them.
-        raise ValueError(
-            f"shots.json numbers fragments up to {max(beyond)}, but with min_words={min_words} "
-            f"the text splits into {len(fragments)}. Use the split the queries were written "
-            f"for (--min-words 1 gives one fragment per paragraph).")
+    _check_written_shots(written_shots, len(fragments), min_words)
 
     games = _as_games(game)
     catalog = _load_catalog(games) if games else []
+    lines = _report_header(source_name, len(fragments), catalog, games)
+    moment_fragments: list[dict] = []
+    for i, fragment in enumerate(fragments, 1):
+        query = query_overrides.get(i) or extract_search_query(fragment)
+        log.info("[Storyboard] Fragment %d/%d: query=[%s]", i, len(fragments), ascii(query))
+        section, moment = _fragment_section(
+            i, fragment, query, catalog, games,
+            written=written_shots[i] if i in written_shots else None,
+            local_per_fragment=local_per_fragment, yt_per_fragment=yt_per_fragment,
+            images_per_source=images_per_source,
+        )
+        lines.extend(section)
+        if moment is not None:
+            moment_fragments.append(moment)
+
+    moments = {
+        "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "source": source_name,
+        "fragments": moment_fragments,
+    }
+    return "\n".join(lines), moments
+
+
+def _check_written_shots(written_shots: dict[int, list], n_fragments: int, min_words: int) -> None:
+    """ValueError when shots.json was numbered against another split of the text:
+    every query would land on the wrong paragraph."""
+    beyond = sorted(n for n in written_shots if n > n_fragments)
+    if beyond:
+        raise ValueError(
+            f"shots.json numbers fragments up to {max(beyond)}, but with min_words={min_words} "
+            f"the text splits into {n_fragments}. Use the split the queries were written "
+            f"for (--min-words 1 gives one fragment per paragraph).")
+
+
+def _report_header(source_name: str, n_fragments: int, catalog: list[dict],
+                   games: list[str]) -> list[str]:
+    """Title block: fragment count, catalog size and what the search runs on."""
     catalog_label = f", catalog: {len(catalog)} videos" if catalog else ""
     if len(games) > 1:
         catalog_label += f" ({', '.join(games)})"
@@ -418,122 +455,130 @@ def generate_report(
     elif catalog:
         catalog_label += ", semantic index: none (keyword fallback)"
 
-    lines = [
+    return [
         f"# Storyboard: {source_name}",
         f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        f"Fragments: {len(fragments)}{catalog_label}",
+        f"Fragments: {n_fragments}{catalog_label}",
         "",
         "---",
         "",
     ]
-    moment_fragments: list[dict] = []
 
-    for i, fragment in enumerate(fragments, 1):
-        query = query_overrides.get(i) or extract_search_query(fragment)
-        print(f"[Storyboard] Fragment {i}/{len(fragments)}: query=[{ascii(query)}]")
-        lines.append(f"## Fragment {i}")
+
+def _fragment_section(
+    i: int, fragment: str, query: str, catalog: list[dict], games: list[str], *,
+    written: list[shot_query.ShotQuery] | None, local_per_fragment: int,
+    yt_per_fragment: int, images_per_source: int,
+) -> tuple[list[str], dict | None]:
+    """Markdown of one fragment and its moments entry (None without a catalog)."""
+    lines = [
+        f"## Fragment {i}",
+        "",
+        "> " + " ".join(fragment.split()),
+        "",
+        f"**Search query:** `{query}`",
+        "",
+    ]
+    moment = None
+    if catalog:
+        # Built once and handed to the search below, so the queries printed
+        # here are provably the ones that produced the hits.
+        shots = written if written is not None else shot_query.build_shot_queries(
+            fragment, game=games[0] if games else None)
+        lines.extend(_shot_query_lines(shots))
+        matches = search_catalog_hits(
+            fragment, catalog, max_results=local_per_fragment, game=games, shots=shots,
+        )
+        moment = {
+            "fragment": i,
+            "text_preview": fragment if len(fragment) <= 60 else fragment[:60] + "...",
+            "candidates": _moment_candidates(matches),
+        }
+        lines.extend(_my_videos_lines(matches, _query_entities(query)))
+
+    lines.extend(_youtube_lines(query, yt_per_fragment))
+    if images_per_source and query:
+        lines.extend(_illustration_block(query, images_per_source))
+    lines.extend(["---", ""])
+    return lines, moment
+
+
+def _shot_query_lines(shots: list[shot_query.ShotQuery]) -> list[str]:
+    """The picture queries the catalog was searched with, or why there are none."""
+    lines = []
+    if shots and shots[0].source in ("llm", "written"):
+        label = ("**Shot queries (shots.json):** " if shots[0].source == "written"
+                 else "**Shot queries:** ")
+        lines.append(label + " · ".join(f"`{s.text}`" for s in shots))
+    elif not shots:
+        lines.append("**Shot queries:** *none — nothing filmable in this fragment*")
+    lines.append("")
+    return lines
+
+
+def _my_videos_lines(matches: list[tuple[dict, embed_index.Hit | None]],
+                     entities: set[str]) -> list[str]:
+    """The "My videos" section: catalog matches, flagged when none names the query's subject."""
+    lines = ["### My videos", ""]
+    if matches and not any(_corroborates(entities, e, h) for e, h in matches):
+        lines.append(
+            f"> **Unconfirmed** — nothing here mentions "
+            f"{', '.join(sorted(entities))}. The catalog most likely has no "
+            f"footage of this episode and these are the nearest generic "
+            f"scenes. Prefer the illustrations below."
+        )
         lines.append("")
-        lines.append("> " + " ".join(fragment.split()))
+    if not matches:
+        return lines + ["*No matching local videos*", ""]
+    for j, (entry, hit) in enumerate(matches, 1):
+        lines.extend(_match_lines(j, entry, hit))
+    return lines
+
+
+def _match_lines(j: int, entry: dict, hit: embed_index.Hit | None) -> list[str]:
+    """One catalog match: the video, and the moment when semantic search found one."""
+    dur = _fmt_duration(entry.get("duration_sec", 0))
+    lines = [
+        f"{j}. **{entry.get('title', 'Untitled')}** ({dur})",
+        f"   - File: `{entry.get('original_name', '?')}`",
+    ]
+    if hit is not None:
+        # The moment, not just the file — this is what goes on the timeline.
+        flag = "" if hit.timing_ok or hit.start_sec is None else " (start only — VLM interval invalid)"
+        lines.append(
+            f"   - Moment: **{hit.timecode}**{flag} "
+            f"({hit.level}{'/' + hit.scene_type if hit.scene_type else ''}, "
+            f"z={hit.score:.2f})"
+        )
+        if hit.query:
+            lines.append(f"   - Found via shot query: `{hit.query}`")
+        lines.append(f"   - Matched: {hit.text[:200]}")
+    else:
+        lines.append("   - Moment: *keyword match — video only, no moment identified*")
+    tags = entry.get("tags", [])
+    if tags:
+        lines.append(f"   - Tags: {', '.join(tags[:8])}")
+    lines.append("")
+    return lines
+
+
+def _youtube_lines(query: str, max_results: int) -> list[str]:
+    """The "YouTube videos" section for one fragment's search query."""
+    lines = ["### YouTube videos", ""]
+    if not query:
+        return lines + ["*Could not extract search query*", ""]
+    yt_results = search_youtube(query, max_results=max_results)
+    if not yt_results:
+        return lines + ["*No YouTube results found*", ""]
+    for j, v in enumerate(yt_results, 1):
+        views = format_view_count(v["view_count"])
+        lines.append(f"{j}. **{v['title']}**")
+        lines.append(
+            f"   - Channel: {v['channel']} | Duration: {v['duration']} | Views: {views}"
+        )
+        lines.append(f"   - URL: {v['url']}")
         lines.append("")
-        lines.append(f"**Search query:** `{query}`")
-        lines.append("")
-
-        if catalog:
-            # Built once and handed to the search below, so the queries printed
-            # here are provably the ones that produced the hits.
-            if i in written_shots:
-                shots = written_shots[i]
-            else:
-                shots = shot_query.build_shot_queries(
-                    fragment, game=games[0] if games else None
-                )
-            if shots and shots[0].source in ("llm", "written"):
-                label = ("**Shot queries (shots.json):** " if shots[0].source == "written"
-                         else "**Shot queries:** ")
-                lines.append(label + " · ".join(f"`{s.text}`" for s in shots))
-            elif not shots:
-                lines.append("**Shot queries:** *none — nothing filmable in this fragment*")
-            lines.append("")
-            matches = search_catalog_hits(
-                fragment, catalog, max_results=local_per_fragment, game=games,
-                shots=shots,
-            )
-            moment_fragments.append({
-                "fragment": i,
-                "text_preview": fragment[:60] + "...",
-                "candidates": _moment_candidates(matches),
-            })
-            lines.append("### My videos")
-            lines.append("")
-            entities = _query_entities(query)
-            if matches and not any(_corroborates(entities, e, h) for e, h in matches):
-                lines.append(
-                    f"> **Unconfirmed** — nothing here mentions "
-                    f"{', '.join(sorted(entities))}. The catalog most likely has no "
-                    f"footage of this episode and these are the nearest generic "
-                    f"scenes. Prefer the illustrations below."
-                )
-                lines.append("")
-            if matches:
-                for j, (entry, hit) in enumerate(matches, 1):
-                    dur = _fmt_duration(entry.get("duration_sec", 0))
-                    lines.append(f"{j}. **{entry.get('title', 'Untitled')}** ({dur})")
-                    lines.append(f"   - File: `{entry.get('original_name', '?')}`")
-                    if hit is not None:
-                        # The moment, not just the file — this is what goes on the timeline.
-                        flag = "" if hit.timing_ok or hit.start_sec is None else " (start only — VLM interval invalid)"
-                        lines.append(
-                            f"   - Moment: **{hit.timecode}**{flag} "
-                            f"({hit.level}{'/' + hit.scene_type if hit.scene_type else ''}, "
-                            f"z={hit.score:.2f})"
-                        )
-                        if hit.query:
-                            lines.append(f"   - Found via shot query: `{hit.query}`")
-                        lines.append(f"   - Matched: {hit.text[:200]}")
-                    else:
-                        lines.append(
-                            "   - Moment: *keyword match — video only, no moment identified*"
-                        )
-                    tags = entry.get("tags", [])
-                    if tags:
-                        lines.append(f"   - Tags: {', '.join(tags[:8])}")
-                    lines.append("")
-            else:
-                lines.append("*No matching local videos*")
-                lines.append("")
-
-        lines.append("### YouTube videos")
-        lines.append("")
-        if query:
-            yt_results = search_youtube(query, max_results=yt_per_fragment)
-            if yt_results:
-                for j, v in enumerate(yt_results, 1):
-                    views = format_view_count(v["view_count"])
-                    lines.append(f"{j}. **{v['title']}**")
-                    lines.append(
-                        f"   - Channel: {v['channel']} | Duration: {v['duration']} | Views: {views}"
-                    )
-                    lines.append(f"   - URL: {v['url']}")
-                    lines.append("")
-            else:
-                lines.append("*No YouTube results found*")
-                lines.append("")
-        else:
-            lines.append("*Could not extract search query*")
-            lines.append("")
-
-        if images_per_source and query:
-            lines.extend(_illustration_block(query, images_per_source))
-
-        lines.append("---")
-        lines.append("")
-
-    moments = {
-        "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "source": source_name,
-        "fragments": moment_fragments,
-    }
-    return "\n".join(lines), moments
+    return lines
 
 
 def _moment_candidates(matches: list[tuple[dict, embed_index.Hit | None]]) -> list[dict]:
@@ -565,6 +610,7 @@ def _moment_candidates(matches: list[tuple[dict, embed_index.Hit | None]]) -> li
 
 
 def save_report(report_text: str, project: str, moments: dict | None = None) -> Path:
+    """Write storyboard.md (and moments.json) into the project folder; returns the storyboard path."""
     project_dir = config.get_project_dir(project)
     report_path = project_dir / "storyboard.md"
     report_path.write_text(report_text, encoding="utf-8")
@@ -575,10 +621,8 @@ def save_report(report_text: str, project: str, moments: dict | None = None) -> 
     return report_path
 
 
-if __name__ == "__main__":
-    import argparse
-    import sys
-
+def main(argv: list[str] | None = None) -> None:
+    """CLI: build projects/<project>/storyboard.md and moments.json from text.md."""
     ap = argparse.ArgumentParser(
         description="Storyboard: search the catalog and YouTube for every narration fragment "
                     "of projects/<project>/text.md -> storyboard.md + moments.json")
@@ -590,7 +634,9 @@ if __name__ == "__main__":
                          "(default 40; 1 = one fragment per paragraph)")
     ap.add_argument("--images", type=int, nargs="?", const=3, default=0, metavar="N",
                     help="also N still images per source (Fandom wiki, Wikimedia Commons); default N=3")
-    args = ap.parse_args()
+    add_verbose_flag(ap)
+    args = ap.parse_args(argv)
+    setup_logging(args.verbose)
 
     if not args.project:
         projects = list_projects()
@@ -600,27 +646,27 @@ if __name__ == "__main__":
                 print(f"  - {p}")
         else:
             print(f"No projects in {config.PROJECTS_DIR}")
-        sys.exit(0)
+        return
 
     images = args.images
     project = args.project
     game = args.game or _detect_game(project)
     text = read_project_text(project)
-    print(f"Processing: {project} ({len(text.split())} words)")
+    log.info("Processing: %s (%d words)", project, len(text.split()))
     if game:
-        print(f"Game(s): {', '.join(_as_games(game))}")
+        log.info("Game(s): %s", ", ".join(_as_games(game)))
     if images:
-        print(f"Illustrations: {images} per source (Fandom wiki + Wikimedia Commons)")
+        log.info("Illustrations: %d per source (Fandom wiki + Wikimedia Commons)", images)
 
     overrides = load_query_overrides(project)
     if overrides:
-        print(f"Query overrides: {len(overrides)} fragments (queries.json)")
+        log.info("Query overrides: %d fragments (queries.json)", len(overrides))
     try:
         written = shot_query.load_written_shots(config.project_path(project) / "shots.json")
     except ValueError as exc:
         sys.exit(f"[Storyboard] {exc}")
     if written:
-        print(f"Picture queries: shots.json for {len(written)} fragments; Ollama for the rest")
+        log.info("Picture queries: shots.json for %d fragments; Ollama for the rest", len(written))
 
     try:
         report, moments = generate_report(text, project, game=game,
@@ -635,3 +681,7 @@ if __name__ == "__main__":
     if moments["fragments"]:
         print(f"Moments saved: {path.parent / 'moments.json'} "
               f"({len(moments['fragments'])} fragments)")
+
+
+if __name__ == "__main__":
+    main()
