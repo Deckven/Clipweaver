@@ -131,3 +131,23 @@ def test_unfixable_cjk_chunk_keeps_its_scenes_but_loses_its_tags(monkeypatch):
     # Tags are search keys — the Chinese ones would never match a query.
     assert result["tags"] == ["kingston", "chase"]
     assert not vlm._has_cjk(result["summary"])
+
+
+# --- failed chunks are recorded, not hidden ---------------------------------
+
+def test_a_failed_chunk_is_recorded_with_its_time_span(monkeypatch):
+    # Review of 42afaac, item 3: a skipped chunk left no trace in the entry.
+    result, calls = _chunked(monkeypatch, ["not json"] * 3 + [GAMEPLAY_CHUNK])
+    assert len(calls) == 4
+    assert result["failed_chunks"] == [{"start": "00:00", "end": "04:10"}]
+    assert result["title"] == "Kingston Rooftop Chase"
+
+
+def test_a_fully_answered_video_has_no_failed_chunks(monkeypatch):
+    result, _ = _chunked(monkeypatch, [UI_CHUNK, GAMEPLAY_CHUNK])
+    assert "failed_chunks" not in result
+
+
+def test_no_answered_chunk_is_an_error_not_an_empty_entry(monkeypatch):
+    with pytest.raises(RuntimeError, match="all 2 chunks failed"):
+        _chunked(monkeypatch, ["not json"] * 6)

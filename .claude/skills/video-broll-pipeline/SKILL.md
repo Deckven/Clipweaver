@@ -124,9 +124,10 @@ re-running never stacks tracks; all times are relative to the narration start.
 ## Known Issues
 
 ### VLM Chunking Quality
-- Processing >50 frames triggers chunked mode (chunks of 50)
-- With 5s interval on a 46-min video: 550 frames = 11 chunks
-- Some chunks may fail to parse (retry with different temperature)
+- More frames than `VLM_CHUNK_SIZE` (12) triggers chunked mode
+- With 5s interval on a 46-min video: 550 frames = 46 chunks
+- A chunk that fails all three attempts is listed in the entry's `failed_chunks`;
+  re-run such entries with `analyzer --retry-incomplete`
 - Specific frame ranges can crash CUDA — fill manually from original VLM
 
 ### Speech ≠ Visuals (keynotes)

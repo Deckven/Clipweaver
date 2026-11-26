@@ -211,7 +211,8 @@ def regenerate_suggestions(game: str, dry_run: bool = False) -> int:
         return 0
 
     updated = 0
-    for p in sorted(cat_dir.rglob("*.json")):
+    paths = _catalog.entry_paths(game)
+    for p in paths:
         try:
             rec = _catalog.read_entry(p)
         except (OSError, ValueError) as e:
@@ -225,7 +226,7 @@ def regenerate_suggestions(game: str, dry_run: bool = False) -> int:
             else:
                 _catalog.write_entry({**rec, "suggested_filename": new_name}, p)
             updated += 1
-    total = len(list(cat_dir.rglob('*.json')))
+    total = len(paths)
     verb = "DRY-RUN: would regenerate" if dry_run else "Regenerated"
     print(f"{verb} suggestions for {updated}/{total} JSONs")
     return updated
@@ -237,13 +238,11 @@ def _rename_plan(game: str) -> list[tuple[Path, Path, Path, Path]]:
     Already-numbered videos keep their number, so the plan is idempotent and
     only ever touches new entries. Returns a list of
     (video_old, video_new, json_old, json_new)."""
-    game_cfg = config.GAMES[game]
-    subdir = game_cfg.get("catalog_subdir", f"{game}_videos")
-    cat_dir = config.CATALOG_DIR / subdir
+    config.game_config(game)  # an unknown game is an error, not an empty plan
 
     # Gather (src, base_name, json_path) for every entry with a live video.
     entries: list[tuple[Path, str, Path]] = []
-    for jp in sorted(cat_dir.rglob("*.json")):
+    for jp in _catalog.entry_paths(game):
         try:
             rec = _catalog.read_entry(jp)
         except (OSError, ValueError) as e:

@@ -425,8 +425,10 @@ footage.
   says so instead of forcing a random clip; fill that fragment by hand.
 - **Scene descriptions need `--interval` ≤ 10 s.** Captures indexed at 30 s
   only have per-frame captions; re-index with `--force --interval 5`.
-- **Indexing long captures** splits the frames into chunks of 50; on 16 GB the
-  default batch is 12 frames per call.
+- **Indexing long captures** sends the frames to the VLM in chunks of
+  `VLM_CHUNK_SIZE` (12, sized for a 16 GB card). A chunk that fails all three
+  attempts is recorded in the entry as `failed_chunks`; `analyzer --dry-run`
+  marks such entries and `analyzer --retry-incomplete` analyzes them again.
 - **No GPU?** Indexing and transcription need CUDA. Search, storyboard,
   curation, alignment, contact sheet and layout run on CPU — with a catalog and
   a `transcript.json` made elsewhere, the rest of the pipeline works.

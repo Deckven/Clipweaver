@@ -43,6 +43,7 @@ from typing import Any
 
 import numpy as np
 
+from . import catalog as _catalog
 from . import config
 from .catalog_docs import (  # noqa: F401 - re-exported: retrieval_eval and callers use them here
     DOC_RULES,
@@ -246,24 +247,14 @@ def _fingerprint(path: Path) -> str:
 
 
 def _catalog_files(game: str | None = None) -> list[Path]:
-    root = config.CATALOG_DIR
-    if not root.exists():
-        return []
-    if game:
-        cfg = config.GAMES.get(game)
-        if not cfg:
-            return []
-        root = root / cfg["catalog_subdir"]
-        if not root.exists():
-            return []
-    return sorted(p for p in root.rglob("*.json") if _index_dir() not in p.parents)
+    """The catalog JSON files a build reads: catalog.entry_paths."""
+    return _catalog.entry_paths(game)
 
 
 def _read_entry(path: Path) -> dict | None:
     """A catalog JSON, or None with a warning when it cannot be read."""
     try:
-        # utf-8-sig: analyzer writes a BOM on Windows
-        return json.loads(path.read_text(encoding="utf-8-sig"))
+        return _catalog.read_entry(path)
     except (OSError, ValueError) as exc:
         log.warning("[Index] skipped unreadable catalog file %s: %s", path, exc)
         return None
@@ -298,7 +289,8 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
     files = _files_to_index(game)
     previous = load_index()
     prev_manifest: dict[str, str] = dict(previous.manifest.get("files", {})) if previous else {}
-    if previous and previous.manifest.get("model") != config.EMBED_MODEL:
+    model_changed = previous is not None and previous.manifest.get("model") != config.EMBED_MODEL
+    if model_changed:
         force = True  # vectors from another model are not comparable
         prev_manifest = {}
     rebuild_docs = _document_rules_changed(previous, game)
@@ -308,7 +300,10 @@ def build_index(game: str | None = None, force: bool = False) -> BuildStats:
     scope = set(fingerprints)
     would_drop = _check_drop(prev_manifest, scope, game, force)
 
-    kept_docs, kept_vectors = ([], []) if previous is None or force else _kept_documents(
+    # force re-embeds every file in scope (all of them are stale), but documents of
+    # games outside a per-game build are kept: dropping them while the manifest
+    # keeps their fingerprints hid those games until the next full --force build.
+    kept_docs, kept_vectors = ([], []) if previous is None or model_changed else _kept_documents(
         previous, {_rel(p) for p in stale}, scope, fingerprints, game)
     new_docs = _new_documents(stale)
     log.info("[Index] %d catalog files, %d to embed, %d documents reused",

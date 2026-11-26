@@ -239,3 +239,23 @@ def test_event_with_missing_media_is_an_error(tmp_path):
     ])
     res = build_layout(rows, FPS, tmp_path / "clips", tmp_path / "footage", {})
     assert any("not found" in e for e in res.errors)
+
+
+def test_hand_written_timings_need_only_end_sec(tmp_path):
+    # Review of 42afaac, item 11: the get() default read duration_sec even when
+    # end_sec was there, so a hand-made timings.json without it raised KeyError.
+    src = tmp_path / "src.mp4"
+    src.write_bytes(b"")
+    t = timing(1, 10.0, 20.0, clip_start=30, clip_end=55)
+    del t["duration_sec"]
+    res = build_layout([t], FPS, tmp_path / "clips", tmp_path / "footage",
+                       catalog_for(source=src), probe=lambda p: None)
+    assert res.errors == [] and res.events[0].length_ms == 20000
+
+
+def test_timings_without_an_end_are_an_error_not_a_crash(tmp_path):
+    t = timing(3, 10.0, 20.0)
+    del t["duration_sec"], t["end_sec"]
+    res = build_layout([t], FPS, tmp_path / "clips", tmp_path / "footage",
+                       catalog_for(), probe=lambda p: None)
+    assert res.events == [] and "fr 03" in res.errors[0]

@@ -150,6 +150,15 @@ def stale_precut_clips(clips_dir: Path, fragment: int, video_name: str | None) -
 # layout construction
 # --------------------------------------------------------------------------
 
+def _fragment_end(t: dict) -> float | None:
+    """A fragment's end second: end_sec, else start_sec + duration_sec, else None."""
+    if "end_sec" in t:
+        return float(t["end_sec"])
+    if "duration_sec" in t:
+        return float(t["start_sec"]) + float(t["duration_sec"])
+    return None
+
+
 def build_layout(timings: list[dict], fps: float, clips_dir: Path,
                  footage_dir: Path, catalog: dict[str, dict],
                  probe=probe_duration_sec) -> LayoutResult:
@@ -162,7 +171,10 @@ def build_layout(timings: list[dict], fps: float, clips_dir: Path,
         # from duration_sec: ends equal the next fragment's start, so lengths
         # derived this way cannot create rounding overlaps between neighbours.
         start_ms = quantize_ms(float(t["start_sec"]), fps)
-        frag_end = float(t.get("end_sec", t["start_sec"] + t["duration_sec"]))
+        frag_end = _fragment_end(t)
+        if frag_end is None:
+            res.errors.append(f"fr {num:02d}: timings entry has neither end_sec nor duration_sec")
+            continue
         frag_len_ms = quantize_ms(frag_end, fps) - start_ms
         preview = (t.get("text_preview") or t.get("transcript_preview") or "")
         label = clean_label(t.get("label") or f"fr {num:02d} {preview}")

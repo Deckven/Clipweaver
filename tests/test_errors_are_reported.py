@@ -112,7 +112,7 @@ def batch(tmp_path, monkeypatch):
     monkeypatch.setitem(analyzer.config.GAMES, GAME, {
         "catalog_subdir": f"{GAME}_videos", "video_dirs": [videos],
     })
-    monkeypatch.setattr(analyzer, "_cuda_available", lambda: False)
+    monkeypatch.setattr(analyzer, "_cuda_available", lambda: True)
 
     def analyze(video, **_):
         if video.name == "bad.mp4":
@@ -145,3 +145,49 @@ def test_missing_explicit_path_stops_before_any_work(batch, tmp_path, caplog):
 def test_unknown_game_is_a_value_error_for_library_callers():
     with pytest.raises(ValueError, match="Unknown game"):
         analyzer.run_batch("no_such_game", None, force=False, interval=None)
+
+
+def test_batch_ends_with_the_list_of_failed_videos(batch, caplog):
+    analyzer.run_batch(GAME, None, force=False, interval=None)
+    summary = [r.getMessage() for r in caplog.records if "failed" in r.getMessage()][-1]
+    assert "1 of 2 video(s) failed" in summary and "bad.mp4" in summary
+
+
+def test_batch_without_cuda_stops_before_any_video(batch, monkeypatch, caplog):
+    # Review of 42afaac, item 6: indexing silently fell back to the CPU.
+    monkeypatch.setattr(analyzer, "_cuda_available", lambda: False)
+    with pytest.raises(SystemExit) as exc:
+        analyzer.main(["--game", GAME])
+    assert exc.value.code == 1
+    assert "CUDA" in caplog.text
+    assert not analyzer.catalog_json_path(batch / "good.mp4", GAME).exists()
+
+
+# --- incomplete entries (failed chunks) -------------------------------------------
+
+@pytest.fixture
+def incomplete(batch, monkeypatch):
+    (batch / "bad.mp4").unlink()
+    gap = [{"start": "00:00", "end": "01:00"}]
+    monkeypatch.setattr(analyzer, "analyze_video",
+                        lambda video, **_: {"suggested_filename": "Good 1.mp4", "failed_chunks": gap})
+    return batch
+
+
+def test_an_entry_with_failed_chunks_is_reported_at_the_end(incomplete, caplog):
+    assert analyzer.run_batch(GAME, None, force=False, interval=None) == 0
+    assert "1 entry is incomplete" in caplog.text and "good.mp4" in caplog.text
+
+
+def test_dry_run_marks_incomplete_entries(incomplete, capsys):
+    analyzer.run_batch(GAME, None, force=False, interval=None)
+    analyzer.main(["--game", GAME, "--dry-run"])
+    out = capsys.readouterr().out
+    assert "DRY-RUN: 0 of 1" in out
+    assert "INCOMPLETE (1 chunk(s) failed, --retry-incomplete)" in out
+
+
+def test_retry_incomplete_analyzes_them_again(incomplete, capsys):
+    analyzer.run_batch(GAME, None, force=False, interval=None)
+    analyzer.main(["--game", GAME, "--dry-run", "--retry-incomplete"])
+    assert "DRY-RUN: 1 of 1" in capsys.readouterr().out

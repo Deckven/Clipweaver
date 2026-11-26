@@ -512,12 +512,23 @@ def catalog_collisions(game: str, videos: list[Path]) -> list[str]:
     return problems
 
 
-def index_plan(game: str, videos: list[Path], force: bool) -> list[tuple[Path, Path, bool]]:
-    """(video, catalog json, will_analyze) per video. Pure: touches nothing."""
+def failed_chunk_count(entry_path: Path) -> int:
+    """How many VLM chunks of a catalog entry failed; 0 when complete or unreadable."""
+    try:
+        entry = _catalog.read_entry(entry_path)
+    except (OSError, ValueError):
+        return 0
+    return len(entry.get("failed_chunks") or []) if isinstance(entry, dict) else 0
+
+
+def index_plan(game: str, videos: list[Path], force: bool,
+               retry_incomplete: bool = False) -> list[tuple[Path, Path, bool]]:
+    """(video, catalog json, will_analyze) per video. Reads entries, writes nothing."""
     plan = []
     for v in videos:
         out = catalog_json_path(v, game)
-        plan.append((v, out, force or not out.exists()))
+        run = force or not out.exists() or (retry_incomplete and failed_chunk_count(out) > 0)
+        plan.append((v, out, run))
     return plan
 
 
@@ -527,17 +538,21 @@ def print_index_plan(plan: list[tuple[Path, Path, bool]]) -> int:
     print(f"DRY-RUN: {todo} of {len(plan)} video(s) would be analyzed "
           f"(no model is loaded, nothing is written)")
     for v, out, run in plan:
-        print(f"  {'ANALYZE' if run else 'skip   '}  {v.name}  ->  {out}")
+        failed = 0 if run else failed_chunk_count(out)
+        note = f"  INCOMPLETE ({failed} chunk(s) failed, --retry-incomplete)" if failed else ""
+        print(f"  {'ANALYZE' if run else 'skip   '}  {v.name}  ->  {out}{note}")
     return todo
 
 
 def run_batch(game: str, paths: list[Path] | None, force: bool,
               interval: int | None, max_frames: int | None = None,
-              dry_run: bool = False) -> int:
+              dry_run: bool = False, retry_incomplete: bool = False) -> int:
     """Analyze every video of a batch into the catalog; returns how many failed.
 
     One failing video does not stop the batch, but it is logged as an error
     and counted, so the caller can exit non-zero instead of reporting success.
+    Entries saved with failed chunks are listed at the end; ``retry_incomplete``
+    analyzes such entries again. Raises RuntimeError without a CUDA GPU.
     """
     game_cfg = config.game_config(game)
 
@@ -564,33 +579,50 @@ def run_batch(game: str, paths: list[Path] | None, force: bool,
         raise ValueError("these videos share a catalog entry name; rename one of each "
                          "pair before indexing:\n  " + "\n  ".join(collisions))
 
+    plan = index_plan(game, videos, force, retry_incomplete)
     # A dry run stops here: no device probe, no model, no catalog folders.
     if dry_run:
-        print_index_plan(index_plan(game, videos, force))
+        print_index_plan(plan)
         return 0
 
-    device = "cuda" if _cuda_available() else "cpu"
-    log.info("Device: %s  |  Game: %s  |  Videos: %d", device, game, len(videos))
+    if not _cuda_available():
+        # On the CPU a 7B VLM takes hours per video; stopping beats a silent crawl.
+        raise RuntimeError("indexing needs a CUDA GPU and torch.cuda.is_available() is False "
+                           "- check the torch build (pip install torch --index-url "
+                           "https://download.pytorch.org/whl/cu128) and the driver")
+    log.info("Device: cuda  |  Game: %s  |  Videos: %d", game, len(videos))
 
-    failed = 0
-    for i, v in enumerate(videos, 1):
-        out = catalog_path_for(v, game)
-        if out.exists() and not force:
-            log.info("[%d/%d] skip (cached): %s", i, len(videos), v.name)
+    failed: list[str] = []
+    incomplete: list[str] = []
+    for i, (v, out, run) in enumerate(plan, 1):
+        if not run:
+            log.info("[%d/%d] skip (cached): %s", i, len(plan), v.name)
             continue
-        log.info("[%d/%d] %s", i, len(videos), v.name)
+        log.info("[%d/%d] %s", i, len(plan), v.name)
         try:
             rec = analyze_video(v, game=game, interval=interval,
-                                max_frames=max_frames, device=device)
-            _catalog.write_entry(rec, out)
+                                max_frames=max_frames, device="cuda")
+            _catalog.write_entry(rec, catalog_path_for(v, game))
             log.info("-> %s  | suggested: %s", out.name, rec["suggested_filename"])
         except Exception as e:  # noqa: BLE001 - batch boundary: keep the other videos going
-            failed += 1
+            failed.append(v.name)
             log.error("FAILED %s: %s", v.name, e)
             log.debug("traceback of the failure", exc_info=True)
+            continue
+        if rec.get("failed_chunks"):
+            incomplete.append(f"{v.name} ({len(rec['failed_chunks'])} chunk(s) failed)")
+    _report_batch(len(plan), failed, incomplete)
+    return len(failed)
+
+
+def _report_batch(total: int, failed: list[str], incomplete: list[str]) -> None:
+    """The end-of-batch summary: failed videos, then entries saved with gaps."""
+    if incomplete:
+        what = "1 entry is" if len(incomplete) == 1 else f"{len(incomplete)} entries are"
+        log.warning("%s incomplete; re-run with --retry-incomplete:\n  %s",
+                    what, "\n  ".join(incomplete))
     if failed:
-        log.error("%d of %d video(s) failed", failed, len(videos))
-    return failed
+        log.error("%d of %d video(s) failed:\n  %s", len(failed), total, "\n  ".join(failed))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -602,8 +634,11 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--interval", type=int, default=None,
                     help=f"Seconds between sampled frames (default {config.VLM_FRAME_INTERVAL_SEC})")
     ap.add_argument("--max-frames", type=int, default=None,
-                    help="Max frames to extract (overrides adaptive cap; VLM processes in chunks of 50)")
+                    help="Max frames to extract (overrides adaptive cap; the VLM sees them in "
+                         f"chunks of VLM_CHUNK_SIZE={config.VLM_CHUNK_SIZE})")
     ap.add_argument("--force", action="store_true", help="Re-analyze even if catalog entry exists")
+    ap.add_argument("--retry-incomplete", action="store_true",
+                    help="Re-analyze entries saved with failed VLM chunks (failed_chunks)")
     ap.add_argument("--regenerate-suggestions", action="store_true",
                     help="Re-run suggest_filename on every cached JSON (no VLM call)")
     ap.add_argument("--rename", action="store_true",
@@ -627,8 +662,8 @@ def main(argv: list[str] | None = None) -> None:
     try:
         failed = run_batch(args.game, args.paths or None, force=args.force,
                            interval=args.interval, max_frames=args.max_frames,
-                           dry_run=args.dry_run)
-    except (FileNotFoundError, ValueError) as e:
+                           dry_run=args.dry_run, retry_incomplete=args.retry_incomplete)
+    except (FileNotFoundError, ValueError, RuntimeError) as e:
         log.error("%s", e)
         sys.exit(1)
     if failed:

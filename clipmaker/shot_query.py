@@ -178,8 +178,12 @@ def _cache_path() -> Path:
     return config.SHOT_QUERY_CACHE
 
 
-def _cache_key(fragment: str, game: str | None, model: str) -> str:
-    raw = f"{model}|{game or ''}|{fragment}".encode()
+def _cache_key(fragment: str, system: str, model: str) -> str:
+    """Cache key over everything that shapes the answer.
+
+    The system prompt carries the game vocab and the query limit, so editing the
+    prompt, a game's vocab or SHOT_QUERY_MAX asks Ollama again."""
+    raw = f"{model}|{system}|{fragment}".encode()
     return hashlib.sha1(raw, usedforsecurity=False).hexdigest()[:20]
 
 
@@ -307,14 +311,14 @@ def build_shot_queries(
     model = model or config.SHOT_QUERY_MODEL
     max_queries = max_queries or config.SHOT_QUERY_MAX
 
-    key = _cache_key(fragment, game, model)
+    system = _SYSTEM.format(
+        max_queries=max_queries, none=_NO_VISUAL, vocab=_vocab_block(game)
+    )
+    key = _cache_key(fragment, system, model)
     cache = _load_cache() if use_cache else {}
     if key in cache:
         return [ShotQuery(text=t, source="llm") for t in cache[key]]
 
-    system = _SYSTEM.format(
-        max_queries=max_queries, none=_NO_VISUAL, vocab=_vocab_block(game)
-    )
     reply = _call_ollama(fragment, system, model)
     if reply is None or not reply.strip():
         # An empty reply is a failure, not "nothing filmable": do not cache it,

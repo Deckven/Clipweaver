@@ -255,33 +255,45 @@ def run_vlm(frame_paths: list[Path], duration_sec: int, interval: int,
     return processor.batch_decode(trimmed, skip_special_tokens=True)[0]
 
 
+_CLOSERS = {"{": "}", "[": "]"}
+
+
 def _repair_truncated_json(snippet: str) -> str:
-    """If generation was cut mid-array, trim back to the last complete `}`
-    inside the `timeline` array and close the structure."""
-    # Remove any trailing partial line inside timeline
-    # Find the `"timeline": [` opener
-    tl_match = re.search(r'"timeline"\s*:\s*\[', snippet)
-    if not tl_match:
-        return snippet
-    prefix = snippet[: tl_match.end()]
-    rest = snippet[tl_match.end():]
+    """Close a reply cut off at max_new_tokens: keep it up to the last complete
+    element of an open array and close every bracket still open.
 
-    # Collect complete top-level {...} objects within the timeline array
-    items, depth, start = [], 0, None
-    for i, ch in enumerate(rest):
-        if ch == "{":
-            if depth == 0:
-                start = i
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0 and start is not None:
-                items.append(rest[start : i + 1])
-                start = None
-
-    if not items:
+    Works for any array (``scenes``, ``tags``, the old ``timeline``) and skips
+    brackets inside strings. Returns the snippet unchanged when no array
+    element was complete before the cut.
+    """
+    stack: list[str] = []
+    cut: tuple[int, list[str]] | None = None
+    in_string = escaped = False
+    for i, ch in enumerate(snippet):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+                if stack and stack[-1] == "[":
+                    cut = (i + 1, list(stack))  # a complete string element
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if not stack:
+                break
+            stack.pop()
+            if stack and stack[-1] == "[":
+                cut = (i + 1, list(stack))  # a complete object or array element
+    if cut is None:
         return snippet
-    return prefix + ", ".join(items) + "]}"
+    end, still_open = cut
+    return snippet[:end] + "".join(_CLOSERS[b] for b in reversed(still_open))
 
 
 def _strip_trailing_commas(s: str) -> str:
@@ -603,6 +615,7 @@ def _run_vlm_chunked(
     req = VlmRequest(game_hint, vocab_hint, name_hint, path_hints, list(ocr_lines or []), device)
     spans = _chunk_spans(len(frame_paths), chunk_size, interval, duration_sec)
     answered = []
+    failed: list[dict] = []
     for idx, (first, start, end) in enumerate(spans, 1):
         if first > 0:
             _empty_cuda_cache()
@@ -610,9 +623,19 @@ def _run_vlm_chunked(
         log.info("VLM chunk %d/%d: frames %d-%d (%s-%s)", idx, len(spans),
                  first + 1, first + len(frames), _fmt_mmss(start), _fmt_mmss(end))
         reply = _ask_chunk(frames, idx, len(spans), start, end, interval, req)
-        if reply is not None:
+        if reply is None:
+            failed.append({"start": _fmt_mmss(start), "end": _fmt_mmss(end)})
+        else:
             answered.append((idx - 1, reply, start, end))
-    return _merge_chunks(answered)
+    if not answered:
+        # An entry with no title, tags or scenes would be saved as done and never
+        # retried; failing the video makes the batch report it.
+        raise RuntimeError(f"all {len(spans)} chunks failed (raw replies in {config.CATALOG_DIR / '_debug'})")
+    merged = _merge_chunks(answered)
+    if failed:
+        # Kept in the entry so a dry run and --retry-incomplete can find the gap.
+        merged["failed_chunks"] = failed
+    return merged
 
 
 def ask_vlm(frame_paths: list[Path], duration_sec: int, interval: int,

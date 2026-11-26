@@ -24,6 +24,7 @@ from .youtube_search import (
 )
 
 log = logging.getLogger(__name__)
+_semantic_warned = False  # the fallback warning is logged once per run
 
 
 def _as_games(game: str | list[str] | None) -> list[str]:
@@ -173,7 +174,14 @@ def _semantic_search(
         if not queries:
             return []  # nothing filmable in this paragraph
         hits = _best_hits_across_queries(queries, max_results, games)
-    except RuntimeError:  # sentence-transformers absent
+    except RuntimeError as exc:
+        # sentence-transformers missing, but also a CUDA OOM: say which, once,
+        # instead of a header that claims a semantic index nobody searched.
+        global _semantic_warned
+        if not _semantic_warned:
+            _semantic_warned = True
+            log.warning("semantic search failed (%s); this and later fragments use "
+                        "keyword search", exc)
         return None
 
     by_path = {

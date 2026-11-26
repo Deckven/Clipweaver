@@ -32,7 +32,7 @@ from pathlib import Path
 
 from . import config
 from . import catalog as _catalog
-from .align import load_transcript
+from .align import fmt_ts, load_transcript
 from .log import add_verbose_flag, setup_logging
 
 log = logging.getLogger(__name__)
@@ -196,13 +196,6 @@ def get_transcript_for_range(segments: list[dict], start_sec: float, end_sec: fl
             break
         parts.append(seg["text"].strip())
     return " ".join(parts)
-
-
-def fmt_ts(sec: float) -> str:
-    """Seconds as HH:MM:SS."""
-    m, s = divmod(int(sec), 60)
-    h, m = divmod(m, 60)
-    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def run(project: str) -> Path:

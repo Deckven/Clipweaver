@@ -67,12 +67,17 @@ To switch: edit `VLM_MODEL` in [config.py](clipmaker/config.py).
 
 ## Chunked Processing
 
-When >50 frames, the analyzer splits into chunks of 50 frames each.
+When there are more frames than `VLM_CHUNK_SIZE` (12, sized for 16 GB VRAM),
+the analyzer splits them into chunks of that size.
 
 **Known issues:**
-- Some chunks may fail to parse — retry with different temperature
+- A chunk that fails all three attempts (greedy, then two sampling temperatures)
+  is listed in the entry as `failed_chunks`, and the batch ends with the list of
+  such entries. `--dry-run` marks them; `--retry-incomplete` analyzes them again.
+  A video where no chunk answered is reported as FAILED and not saved.
 - Specific frame ranges can crash CUDA — fill manually from adjacent chunks
-- 275+ frames in chunks of 50 — OCR quality degrades, scenes may be empty
+- The old chunk size of 50 degraded OCR on 275+ frames and left scenes empty;
+  that is why the size is 12 now
 
 **`max_new_tokens` formula:** `60 * n_frames`, but may be insufficient for 7B model
 (more verbose responses). Cap defined in `VLM_MAX_NEW_TOKENS_MAX` (currently 2500).

@@ -52,8 +52,9 @@ def _load_dotenv(path: Path) -> None:
         key, value = line.split("=", 1)
         key = key.removeprefix("export ").strip()
         value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
+        closing = value.find(value[0], 1) if value[:1] in ("'", '"') else -1
+        if closing != -1:
+            value = value[1:closing]  # a quoted value ends at its quote; a comment may follow
         elif " #" in value:
             value = value.split(" #", 1)[0].rstrip()
         if key:

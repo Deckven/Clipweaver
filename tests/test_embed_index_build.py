@@ -83,3 +83,20 @@ def test_changed_document_rules_rebuild_every_file(catalog, monkeypatch):
         embed_index.build_index(game="g")
     assert embed_index.build_index().files_embedded == 4
     assert embed_index.build_index().files_embedded == 0
+
+
+def test_forced_build_of_one_game_keeps_the_other_games(catalog, tmp_path, monkeypatch):
+    # Review of 42afaac, item 2: --game a --force dropped every other game, and the
+    # manifest kept their fingerprints, so the next plain build never brought them back.
+    sub, _ = catalog
+    other = sub.parent / "h_videos"
+    other.mkdir()
+    (other / "x.json").write_text(json.dumps({**entry("x"), "game": "h"}), encoding="utf-8")
+    monkeypatch.setitem(config.GAMES, "h", {"video_dirs": [], "catalog_subdir": "h_videos"})
+
+    full = embed_index.build_index()
+    forced = embed_index.build_index(game="g", force=True)
+    assert forced.files_embedded == 4
+    assert forced.documents == full.documents
+    after = embed_index.build_index()
+    assert after.files_embedded == 0 and after.documents == full.documents

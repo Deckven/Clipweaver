@@ -1,5 +1,6 @@
 """Resolve export: layout.txt (+ overlays) -> OTIO and FCPXML, on fixtures with
 a fake ffprobe. Positions are checked in timeline frames."""
+import subprocess
 import xml.etree.ElementTree as ET
 from fractions import Fraction
 from pathlib import Path
@@ -148,3 +149,29 @@ def test_missing_media_fails_before_anything_is_written(project):
 ])
 def test_probe_rates_snap_to_the_standard_rate(text, rate):
     assert rx._rate(text) == rate
+
+
+def test_fcpxml_frame_size_follows_the_footage(project):
+    # Review of 42afaac, item 9: the sequence was always 1920x1080.
+    name, table = project
+    table = {p: (Media(m.path, m.rate, m.duration, m.has_video, m.has_audio, 2560, 1440)
+                 if m.rate else m) for p, m in table.items()}
+    _, fcpxml_path = rx.export_project(name, probe=fake_probe(table))
+    seq_format = ET.parse(fcpxml_path).getroot().find("resources/format[@id='r1']")
+    assert (seq_format.get("width"), seq_format.get("height")) == ("2560", "1440")
+
+
+def test_fcpxml_without_sized_footage_keeps_1080p(project):
+    name, table = project
+    _, fcpxml_path = rx.export_project(name, probe=fake_probe(table))
+    seq_format = ET.parse(fcpxml_path).getroot().find("resources/format[@id='r1']")
+    assert (seq_format.get("width"), seq_format.get("height")) == ("1920", "1080")
+
+
+def test_probe_reads_the_frame_size(monkeypatch, tmp_path):
+    out = ('{"streams": [{"codec_type": "video", "avg_frame_rate": "60/1", '
+           '"width": 3840, "height": 2160}], "format": {"duration": "10"}}')
+    monkeypatch.setattr(rx.subprocess, "run",
+                        lambda *a, **k: subprocess.CompletedProcess(a, 0, out, ""))
+    m = rx.probe_media(tmp_path / "a.mp4")
+    assert (m.width, m.height) == (3840, 2160)

@@ -207,3 +207,23 @@ def test_nothing_filmable_is_said_and_cached(monkeypatch, caplog):
     assert shot_query.build_shot_queries("Thanks for watching.", use_cache=True) == []
     assert "nothing filmable" in caplog.text
     assert json.loads(config.SHOT_QUERY_CACHE.read_text(encoding="utf-8")) != {}
+
+
+def test_a_changed_prompt_or_query_limit_misses_the_cache(monkeypatch):
+    # Review of 42afaac, item 5: the key was model|game|fragment, so an edited
+    # system prompt, vocab or SHOT_QUERY_MAX kept serving the old answers.
+    asked = []
+
+    def ollama(fragment, system, model):
+        asked.append(system)
+        return "a ship in a storm"
+
+    monkeypatch.setattr(shot_query, "_call_ollama", ollama)
+    shot_query.build_shot_queries("Ships.", max_queries=3)
+    shot_query.build_shot_queries("Ships.", max_queries=3)
+    assert len(asked) == 1
+    shot_query.build_shot_queries("Ships.", max_queries=5)
+    assert len(asked) == 2
+    monkeypatch.setattr(shot_query, "_SYSTEM", shot_query._SYSTEM + "\nNew rule.")
+    shot_query.build_shot_queries("Ships.", max_queries=5)
+    assert len(asked) == 3

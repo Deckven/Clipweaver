@@ -67,6 +67,17 @@ def test_unknown_game_and_missing_folder_give_nothing(games):
     assert catalog.load_entries(["g2"]) == []
 
 
+
+def test_entry_paths_is_the_one_walk_over_the_catalog(games, monkeypatch):
+    # Review of 42afaac: embed_index and naming walked the folders themselves.
+    monkeypatch.setattr(config, "EMBED_INDEX_DIR", games / "_index")
+    a = write(games, "g1_videos/sub/a.json", entry("a.mp4"))
+    b = write(games, "g2_videos/b.json", entry("b.mp4"))
+    write(games, "_index/docs.json", [])
+    assert catalog.entry_paths("g1") == [a]
+    assert catalog.entry_paths() == [a, b]
+    assert catalog.entry_paths("no_such_game") == []
+
 def test_resolve_source_order(tmp_path):
     footage = tmp_path / "footage"
     footage.mkdir()

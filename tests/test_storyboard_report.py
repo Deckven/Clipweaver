@@ -227,3 +227,20 @@ def test_no_entity_named_means_nothing_to_corroborate():
 def test_a_generic_scene_does_not_corroborate_a_named_episode():
     e = {"title": "Havana harbour", "original_name": "h.mp4", "tags": ["havana"]}
     assert not report._corroborates({"Alexander"}, e, hit("h", 3.4))
+
+
+def test_a_failing_semantic_search_is_reported_once(monkeypatch, caplog):
+    # Review of 42afaac, item 4: a CUDA OOM is a RuntimeError too and was taken
+    # for "sentence-transformers absent", so the storyboard fell back silently.
+    monkeypatch.setattr(report, "_semantic_warned", False)
+    monkeypatch.setattr(report.embed_index, "load_index", lambda: object())
+
+    def oom(*_a, **_k):
+        raise RuntimeError("CUDA out of memory")
+
+    monkeypatch.setattr(report, "_best_hits_across_queries", oom)
+    shots = [ShotQuery("ship", "written")]
+    assert report._semantic_search("frag", [], 3, None, shots=shots) is None
+    assert report._semantic_search("frag", [], 3, None, shots=shots) is None
+    warnings = [r for r in caplog.records if "CUDA out of memory" in r.getMessage()]
+    assert len(warnings) == 1 and warnings[0].levelname == "WARNING"

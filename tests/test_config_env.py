@@ -56,6 +56,18 @@ def test_inline_comment_is_cut_from_unquoted_values_only(tmp_path, monkeypatch):
         monkeypatch.delenv(key)
 
 
+
+def test_a_quoted_value_with_a_comment_loses_its_quotes(tmp_path, monkeypatch):
+    # Review of 42afaac, item 10: KEY="value" # comment kept the quotes.
+    env = tmp_path / ".env"
+    env.write_text("CM_P=\"raw footage\" # captures\nCM_Q='x y'   \n", encoding="utf-8")
+    for key in ("CM_P", "CM_Q"):
+        monkeypatch.delenv(key, raising=False)
+    config._load_dotenv(env)
+    assert (os.environ["CM_P"], os.environ["CM_Q"]) == ("raw footage", "x y")
+    for key in ("CM_P", "CM_Q"):
+        monkeypatch.delenv(key)
+
 def test_utf16_dotenv_fails_with_a_clear_message(tmp_path):
     env = tmp_path / ".env"
     env.write_text("CM_X=1\n", encoding="utf-16")

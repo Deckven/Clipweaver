@@ -126,6 +126,8 @@ class Media:
     duration: Fraction | None    # seconds; None for stills
     has_video: bool
     has_audio: bool
+    width: int | None = None     # pixels; None for stills and audio
+    height: int | None = None
 
     @property
     def still(self) -> bool:
@@ -159,7 +161,7 @@ def probe_media(path: Path) -> Media:
     if path.suffix.lower() in STILL_EXTS:
         return Media(path, None, None, True, False)
     cmd = ["ffprobe", "-v", "error", "-show_entries",
-           "stream=codec_type,avg_frame_rate,r_frame_rate:format=duration",
+           "stream=codec_type,avg_frame_rate,r_frame_rate,width,height:format=duration",
            "-of", "json", str(path)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -175,7 +177,16 @@ def probe_media(path: Path) -> Media:
         rate = _rate(video.get("avg_frame_rate")) or _rate(video.get("r_frame_rate"))
     duration = Fraction(info["format"].get("duration", "0")).limit_denominator(1_000_000)
     return Media(path, rate, duration, video is not None,
-                 any(s.get("codec_type") == "audio" for s in streams))
+                 any(s.get("codec_type") == "audio" for s in streams),
+                 _dimension(video, "width"), _dimension(video, "height"))
+
+
+def _dimension(stream: dict | None, key: str) -> int | None:
+    """A stream's width or height from ffprobe, None when absent or not a number."""
+    try:
+        return int(stream[key]) if stream and stream.get(key) else None
+    except (TypeError, ValueError):
+        return None
 
 
 # --------------------------------------------------------------------------
@@ -293,13 +304,34 @@ def _t(seconds: Fraction) -> str:
     return f"{seconds.numerator}/{seconds.denominator}s"
 
 
+DEFAULT_FRAME_SIZE = (1920, 1080)
+
+
+def frame_size(video: list[tuple[str, list[Placed]]]) -> tuple[int, int]:
+    """The sequence size: the size most of the placed footage has.
+
+    Ties go to the larger frame; stills and unprobed media do not vote, and with
+    no sized footage at all the sequence stays 1920x1080."""
+    votes: dict[tuple[int, int], int] = {}
+    for _, placed in video:
+        for p in placed:
+            if p.media.width and p.media.height and not p.media.still:
+                size = (p.media.width, p.media.height)
+                votes[size] = votes.get(size, 0) + 1
+    if not votes:
+        return DEFAULT_FRAME_SIZE
+    return max(votes, key=lambda s: (votes[s], s[0] * s[1]))
+
+
 def build_fcpxml(name: str, rate: Fraction, video: list[tuple[str, list[Placed]]],
                  narration: Media | None) -> str:
     """The timeline as FCPXML 1.9 text for DaVinci Resolve."""
     frame = 1 / rate
     root = ET.Element("fcpxml", version="1.9")
     resources = ET.SubElement(root, "resources")
-    ET.SubElement(resources, "format", id="r1", frameDuration=_t(frame), width="1920", height="1080")
+    width, height = frame_size(video)
+    ET.SubElement(resources, "format", id="r1", frameDuration=_t(frame),
+                  width=str(width), height=str(height))
     formats: dict[Fraction | None, str] = {}
     assets: dict[Path, str] = {}
 

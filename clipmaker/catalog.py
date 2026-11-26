@@ -43,6 +43,24 @@ def catalog_dir(game: str) -> Path | None:
     return config.CATALOG_DIR / game_cfg["catalog_subdir"]
 
 
+def entry_paths(game: str | None = None) -> list[Path]:
+    """Catalog JSON files, sorted: one game's folder, or the whole catalog.
+
+    The whole catalog skips the embedding index folder when it lives inside
+    it. An unknown game or a missing folder gives an empty list."""
+    if game is None:
+        root = config.CATALOG_DIR
+    else:
+        found = catalog_dir(game)
+        if found is None:
+            return []
+        root = found
+    if not root.is_dir():
+        return []
+    index_dir = config.EMBED_INDEX_DIR
+    return sorted(p for p in root.rglob("*.json") if index_dir not in p.parents)
+
+
 def load_entries(games: Iterable[str] | None = None) -> list[dict]:
     """Every catalog entry of `games` (all configured games by default).
 
@@ -52,10 +70,7 @@ def load_entries(games: Iterable[str] | None = None) -> list[dict]:
     """
     entries: list[dict] = []
     for game in (list(games) if games is not None else list(config.GAMES)):
-        cat_dir = catalog_dir(game)
-        if cat_dir is None or not cat_dir.is_dir():
-            continue
-        for path in sorted(cat_dir.rglob("*.json")):
+        for path in entry_paths(game):
             rel = path.relative_to(config.CATALOG_DIR).as_posix()
             try:
                 data = read_entry(path)
