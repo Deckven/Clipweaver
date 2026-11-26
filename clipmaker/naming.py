@@ -266,7 +266,8 @@ def _rename_plan(game: str) -> list[tuple[Path, Path, Path, Path]]:
         items.sort(key=lambda t: t[0].name)
 
     plan: list[tuple[Path, Path, Path, Path]] = []
-    claimed: set[Path] = set()
+    claimed: set[Path] = set()       # video destinations reserved by this batch
+    claimed_json: set[Path] = set()  # catalog destinations reserved by this batch
     for base, items in groups.items():
         stem, ext = Path(base).stem, Path(base).suffix
         seq_re = re.compile(re.escape(stem) + " ([0-9]+)" + re.escape(ext) + "$")
@@ -292,17 +293,32 @@ def _rename_plan(game: str) -> list[tuple[Path, Path, Path, Path]]:
         for src, jp in pending:
             while True:
                 new_video = src.with_name(f"{stem} {next_n}{ext}")
-                if (next_n not in taken and new_video not in claimed
-                        and not new_video.exists()):
+                new_json = jp.with_name(f"{new_video.stem}.json")
+                if (next_n not in taken and _free(new_video, src, claimed)
+                        and _free(new_json, jp, claimed_json)):
                     break
                 next_n += 1
             taken.add(next_n)
             claimed.add(new_video)
-            new_json = jp.with_name(f"{new_video.stem}.json")
+            claimed_json.add(new_json)
             plan.append((src, new_video, jp, new_json))
 
     plan.sort(key=lambda p: p[0].name)
     return plan
+
+
+def _free(dest: Path, current: Path, claimed: set[Path]) -> bool:
+    """True when dest is neither reserved by this batch nor another file on disk."""
+    return dest not in claimed and (dest == current or not dest.exists())
+
+
+def _move(src: Path, dest: Path) -> None:
+    """Rename that never replaces another file: os.rename overwrites on POSIX.
+
+    A case-only rename (same file on a case-insensitive disk) is allowed."""
+    if dest.exists() and not (src.exists() and src.samefile(dest)):
+        raise FileExistsError(f"{dest} already exists")
+    src.rename(dest)
 
 
 def curation_files_naming(names: set[str]) -> dict[Path, list[str]]:
@@ -353,7 +369,7 @@ def rename_from_catalog(game: str, dry_run: bool) -> int:
     executed = 0
     for old_v, new_v, old_j, new_j in plan:
         try:
-            old_v.rename(new_v)
+            _move(old_v, new_v)
         except OSError as e:
             log.error("FAILED video rename %s: %s", old_v.name, e)
             continue
@@ -364,7 +380,7 @@ def rename_from_catalog(game: str, dry_run: bool) -> int:
             rec["original_name"] = new_v.name
             _catalog.write_entry(rec, old_j)
             if new_j != old_j:
-                old_j.rename(new_j)
+                _move(old_j, new_j)
         except (OSError, ValueError) as e:
             # The video already carries its new name: the entry now points at a
             # file that is gone, so say exactly which one to fix by hand.

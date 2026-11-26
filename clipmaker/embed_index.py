@@ -19,7 +19,8 @@ Three document levels, because catalog coverage is uneven:
           character names are that scene descriptions leave out; HUD and menu
           fragments stay out so they never dilute the scenes.
 
-Storage is a single .npz of float32 vectors plus a parallel docs.json. At
+Storage is a single .npz of float32 vectors plus a parallel docs.json, written
+as one generation folder that a CURRENT file points at (see _save_index). At
 catalog scale (~4k documents) brute-force cosine is sub-10 ms, so there is no
 vector database here on purpose — a server-backed store would add a heavy
 dependency and buy nothing.
@@ -36,6 +37,9 @@ import hashlib
 import json
 import logging
 import os
+import re
+import shutil
+import uuid
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -61,9 +65,13 @@ log = logging.getLogger(__name__)
 _VECTORS_FILE = "vectors.npz"
 _DOCS_FILE = "docs.json"
 _MANIFEST_FILE = "manifest.json"
+# Each build is written into its own generation folder; CURRENT names the one
+# readers open, so vectors, documents and manifest are always of one build.
+_CURRENT_FILE = "CURRENT"
+_GENERATION_RE = re.compile(r"gen-[0-9a-f]{32}")
 
 _model = None
-_index_cache: tuple[int, Index] | None = None
+_index_cache: tuple[tuple[str, int], Index] | None = None
 
 
 @dataclass(frozen=True)
@@ -177,30 +185,61 @@ def _index_dir() -> Path:
     return config.EMBED_INDEX_DIR
 
 
+@dataclass(frozen=True)
+class IndexFiles:
+    """The three files of one published index generation."""
+    vectors: Path
+    docs: Path
+    manifest: Path
+
+
+def _current_generation(d: Path) -> str | None:
+    """The generation folder CURRENT names; None when there is no pointer (or it is bad)."""
+    try:
+        name = (d / _CURRENT_FILE).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not _GENERATION_RE.fullmatch(name):
+        log.warning("ignoring %s: %r is not an index generation", d / _CURRENT_FILE, name)
+        return None
+    return name
+
+
+def index_files() -> IndexFiles | None:
+    """The files of the published index, or None when there is no index.
+
+    An index written before generations (the three files directly in the index
+    folder) is still read; the next build replaces it with a generation.
+    """
+    d = _index_dir()
+    name = _current_generation(d)
+    folder = d / name if name else d
+    files = IndexFiles(folder / _VECTORS_FILE, folder / _DOCS_FILE, folder / _MANIFEST_FILE)
+    return files if files.vectors.exists() and files.docs.exists() else None
+
+
 def load_index() -> Index | None:
-    """Load the index, cached by file mtime.
+    """Load the index, cached by generation and file mtime.
 
     A storyboard run calls this once per fragment; re-reading the .npz each
     time dominated the search cost.
     """
     global _index_cache
-    d = _index_dir()
-    vec_path, docs_path = d / _VECTORS_FILE, d / _DOCS_FILE
-    if not (vec_path.exists() and docs_path.exists()):
+    files = index_files()
+    if files is None:
         return None
-
-    stamp = vec_path.stat().st_mtime_ns
-    if _index_cache is not None and _index_cache[0] == stamp:
-        return _index_cache[1]
+    d = files.vectors.parent
 
     try:
-        with np.load(vec_path) as npz:
+        stamp = (str(d), files.vectors.stat().st_mtime_ns)
+        if _index_cache is not None and _index_cache[0] == stamp:
+            return _index_cache[1]
+        with np.load(files.vectors) as npz:
             vectors = npz["vectors"]
-        docs = json.loads(docs_path.read_text(encoding="utf-8"))
-        manifest_path = d / _MANIFEST_FILE
+        docs = json.loads(files.docs.read_text(encoding="utf-8"))
         manifest = (
-            json.loads(manifest_path.read_text(encoding="utf-8"))
-            if manifest_path.exists() else {}
+            json.loads(files.manifest.read_text(encoding="utf-8"))
+            if files.manifest.exists() else {}
         )
     except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
         # A truncated .npz (a crash mid-write before _save_index went atomic, a
@@ -218,17 +257,25 @@ def load_index() -> Index | None:
 
 
 def _save_index(index: Index) -> None:
-    """Write the three index files so a crash never leaves them out of step:
-    each goes to a temporary name first and is swapped in with os.replace,
-    the manifest last."""
+    """Publish the index as one generation: all three files go into a new folder,
+    then one os.replace of CURRENT switches readers to it.
+
+    A crash at any point leaves the previous generation published and whole; it
+    used to replace the three files one by one, and a refresh stopped after the
+    vectors paired new vectors with old documents when both had the same length.
+    The previous generation is kept for a reader that opened it a moment ago.
+    """
     d = _index_dir()
     d.mkdir(parents=True, exist_ok=True)
-    tmp_vectors = d / ("tmp-" + _VECTORS_FILE)
-    np.savez_compressed(tmp_vectors, vectors=index.vectors)
-    tmp_docs = d / ("tmp-" + _DOCS_FILE)
-    tmp_docs.write_text(json.dumps(index.docs, ensure_ascii=False), encoding="utf-8")
-    tmp_manifest = d / ("tmp-" + _MANIFEST_FILE)
-    tmp_manifest.write_text(
+    for leftover in d.glob("tmp-*"):  # from a save that crashed
+        _remove(leftover)
+    previous = _current_generation(d)
+    name = f"gen-{uuid.uuid4().hex}"
+    staging = d / f"tmp-{name}"
+    staging.mkdir()
+    np.savez_compressed(staging / _VECTORS_FILE, vectors=index.vectors)
+    (staging / _DOCS_FILE).write_text(json.dumps(index.docs, ensure_ascii=False), encoding="utf-8")
+    (staging / _MANIFEST_FILE).write_text(
         json.dumps({
             "model": config.EMBED_MODEL,
             "window_frames": config.EMBED_WINDOW_FRAMES,
@@ -237,9 +284,31 @@ def _save_index(index: Index) -> None:
         }, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    os.replace(tmp_vectors, d / _VECTORS_FILE)
-    os.replace(tmp_docs, d / _DOCS_FILE)
-    os.replace(tmp_manifest, d / _MANIFEST_FILE)
+    os.replace(staging, d / name)
+    pointer = d / f"tmp-{_CURRENT_FILE}"
+    pointer.write_text(name, encoding="utf-8")
+    os.replace(pointer, d / _CURRENT_FILE)  # the publish: one atomic switch
+    _prune(d, keep={name, previous})
+
+
+def _prune(d: Path, keep: set[str | None]) -> None:
+    """Drop generations other than ``keep`` and the files of the flat layout."""
+    for path in d.iterdir():
+        flat = path.name in (_VECTORS_FILE, _DOCS_FILE, _MANIFEST_FILE)
+        old_generation = path.is_dir() and _GENERATION_RE.fullmatch(path.name) and path.name not in keep
+        if flat or old_generation:
+            _remove(path)
+
+
+def _remove(path: Path) -> None:
+    """Delete a file or folder of the index; a failure only costs disk space."""
+    try:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    except OSError as exc:
+        log.warning("could not remove %s from the index folder: %s", path, exc)
 
 
 def _fingerprint(path: Path) -> str:

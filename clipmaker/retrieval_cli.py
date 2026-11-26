@@ -42,9 +42,10 @@ def _index_freshness(catalog_dir: Path, game: str) -> dict[str, int]:
     """How many of the game's catalog files the semantic index has not embedded as-is."""
     from . import embed_index
 
-    manifest_path = Path(config.EMBED_INDEX_DIR) / "manifest.json"
+    index = embed_index.index_files()
+    manifest_path = index.manifest if index else None
     files = json.loads(manifest_path.read_text(encoding="utf-8")).get("files", {}) \
-        if manifest_path.exists() else {}
+        if manifest_path and manifest_path.exists() else {}
     root = catalog_dir / config.GAMES[game]["catalog_subdir"]
     stale = missing = 0
     for path in root.rglob("*.json"):
@@ -57,13 +58,14 @@ def _index_freshness(catalog_dir: Path, game: str) -> dict[str, int]:
 
 
 def _index_info() -> str:
-    d = Path(config.EMBED_INDEX_DIR)
-    manifest = d / "manifest.json"
-    model = json.loads(manifest.read_text(encoding="utf-8")).get("model", "?") \
-        if manifest.exists() else "?"
-    vectors = d / "vectors.npz"
-    built = datetime.fromtimestamp(vectors.stat().st_mtime).strftime("%Y-%m-%d %H:%M") \
-        if vectors.exists() else "?"
+    from . import embed_index
+
+    index = embed_index.index_files()
+    if index is None:
+        return "?, собран ?"
+    model = json.loads(index.manifest.read_text(encoding="utf-8")).get("model", "?") \
+        if index.manifest.exists() else "?"
+    built = datetime.fromtimestamp(index.vectors.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
     return f"{model}, собран {built}"
 
 

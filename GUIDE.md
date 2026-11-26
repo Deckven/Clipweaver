@@ -211,7 +211,9 @@ end and is the right choice for B-roll; 30 is a fast first pass. Output: one
 JSON per capture in `catalog/my_game_videos/`.
 
 Tidy names (optional): `--regenerate-suggestions` proposes names from the
-catalog, `rename_videos --game my_game` shows the renames, `--apply` does them.
+catalog, `rename_videos --game my_game` shows the renames, `--apply` does them
+(the same as `analyzer --rename`). Videos that share a name get ` 1`, ` 2`, ...;
+no rename ever lands on an existing file.
 
 ### Step 2. Build the semantic index
 

@@ -153,7 +153,7 @@ def test_no_index_is_no_hits(fake_embed):
 
 def test_a_truncated_npz_is_reported_not_read_as_no_index(fake_embed, caplog):
     save(background() + [TARGET])
-    vectors = config.EMBED_INDEX_DIR / "vectors.npz"
+    vectors = embed_index.index_files().vectors
     vectors.write_bytes(vectors.read_bytes()[:40])
     embed_index._index_cache = None
     assert embed_index.search(QUERY) == []
@@ -163,7 +163,7 @@ def test_a_truncated_npz_is_reported_not_read_as_no_index(fake_embed, caplog):
 def test_vectors_out_of_step_with_docs_are_reported(fake_embed, caplog):
     save(background() + [TARGET])
     rows = background()[:3]
-    np.savez_compressed(config.EMBED_INDEX_DIR / "vectors.npz",
+    np.savez_compressed(embed_index.index_files().vectors,
                         vectors=np.vstack([v for _, v in rows]))
     embed_index._index_cache = None
     assert embed_index.search(QUERY) == []

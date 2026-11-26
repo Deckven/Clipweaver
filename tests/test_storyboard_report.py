@@ -6,6 +6,7 @@ No Ollama (written shot queries only), no YouTube, no model download.
 """
 import json
 import math
+import shutil
 
 import numpy as np
 import pytest
@@ -116,8 +117,7 @@ def test_a_hit_that_names_none_of_the_query_entities_is_flagged(catalog):
 
 
 def test_without_an_index_the_keyword_match_names_the_video_but_no_moment(catalog):
-    for f in config.EMBED_INDEX_DIR.iterdir():
-        f.unlink()
+    shutil.rmtree(config.EMBED_INDEX_DIR)
     embed_index._index_cache = None
     text = "Naval fight off the coast near havana."
     md, moments = report.generate_report(text, "proj", game=GAME, min_words=1,

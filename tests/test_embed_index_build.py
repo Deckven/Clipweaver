@@ -1,6 +1,7 @@
 """build_index on a fake embedder: incremental reuse, and the refusals that keep
 an unplugged drive or a typo from wiping the index."""
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -46,11 +47,11 @@ def test_rebuild_reuses_unchanged_files(catalog):
 
 def test_missing_catalog_leaves_the_index_alone(catalog, monkeypatch, tmp_path):
     embed_index.build_index()
-    before = (config.EMBED_INDEX_DIR / "docs.json").read_bytes()
+    before = embed_index.index_files().docs.read_bytes()
     monkeypatch.setattr(config, "CATALOG_DIR", tmp_path / "unplugged")
     with pytest.raises(RuntimeError, match="left as it is"):
         embed_index.build_index()
-    assert (config.EMBED_INDEX_DIR / "docs.json").read_bytes() == before
+    assert embed_index.index_files().docs.read_bytes() == before
 
 
 def test_mass_drop_needs_force(catalog):
@@ -72,7 +73,57 @@ def test_unknown_game_is_refused_before_anything(catalog):
 def test_save_leaves_no_temp_files(catalog):
     embed_index.build_index()
     names = sorted(p.name for p in config.EMBED_INDEX_DIR.iterdir())
-    assert names == ["docs.json", "manifest.json", "vectors.npz"]
+    assert names[0] == "CURRENT" and len(names) == 2 and names[1].startswith("gen-")
+    generation = config.EMBED_INDEX_DIR / names[1]
+    assert sorted(p.name for p in generation.iterdir()) == ["docs.json", "manifest.json", "vectors.npz"]
+
+
+def test_an_interrupted_save_leaves_the_published_index_whole(catalog, monkeypatch):
+    # Review by Vitaly Chashchin: the three files were replaced one by one, so a
+    # refresh stopped after the vectors could pair new vectors with old documents
+    # when both had the same length.
+    sub, _ = catalog
+    embed_index.build_index()
+    before = embed_index.load_index()
+    for n in ("a", "b", "c", "d"):
+        (sub / f"{n}.json").write_text(json.dumps({**entry(n), "title": n + " renamed"}),
+                                       encoding="utf-8")
+    real_replace = embed_index.os.replace
+
+    def crash_on_publish(src, dst):
+        if Path(dst).name == "CURRENT":
+            raise OSError("power cut")
+        real_replace(src, dst)
+
+    monkeypatch.setattr(embed_index.os, "replace", crash_on_publish)
+    with pytest.raises(OSError, match="power cut"):
+        embed_index.build_index()
+    monkeypatch.setattr(embed_index, "_index_cache", None)
+    after = embed_index.load_index()
+    assert after.docs == before.docs
+    assert np.array_equal(after.vectors, before.vectors)
+
+
+def test_old_generations_are_pruned_but_the_previous_one_is_kept(catalog):
+    sub, _ = catalog
+    for i in range(3):
+        (sub / "a.json").write_text(json.dumps({**entry("a"), "title": f"a{i}"}), encoding="utf-8")
+        embed_index.build_index()
+    generations = [p for p in config.EMBED_INDEX_DIR.iterdir() if p.name.startswith("gen-")]
+    assert len(generations) == 2
+
+
+def test_an_index_in_the_old_flat_layout_is_still_read(catalog):
+    embed_index.build_index()
+    current = embed_index.index_files()
+    for f in (current.vectors, current.docs, current.manifest):
+        f.replace(config.EMBED_INDEX_DIR / f.name)
+    (config.EMBED_INDEX_DIR / "CURRENT").unlink()
+    embed_index._index_cache = None
+    assert len(embed_index.load_index()) > 0
+    embed_index.build_index()  # the next save publishes a generation and drops the flat files
+    assert not (config.EMBED_INDEX_DIR / "vectors.npz").exists()
+    assert embed_index.index_files().vectors.parent.name.startswith("gen-")
 
 
 def test_changed_document_rules_rebuild_every_file(catalog, monkeypatch):
