@@ -107,6 +107,21 @@ def test_load_curation_accepts_both_forms(tmp_path):
     assert cur[2] == ("ranged.mp4", 30.0, 55.0)
 
 
+def test_load_curation_null_marks_a_deliberately_empty_fragment(tmp_path):
+    (tmp_path / "curation.json").write_text(json.dumps({"1": None, "2": "a.mp4"}),
+                                            encoding="utf-8")
+    cur = load_curation(tmp_path)
+    assert cur[1] is None
+    assert cur[2] == ("a.mp4", None, None)
+
+
+def test_empty_curation_beats_a_semantic_moment():
+    # Never pad coverage: a fragment the editor left empty stays empty even
+    # though report.py found a (wrong) moment for it.
+    choice = choose_clip(3, 12.0, {3: None}, {3: [cand()]}, {})
+    assert choice == {"primary_video": None, "clip_source": "curation:empty"}
+
+
 def test_load_curation_rejects_malformed_entries(tmp_path):
     (tmp_path / "curation.json").write_text(json.dumps({"1": ["x.mp4", 5]}),
                                             encoding="utf-8")

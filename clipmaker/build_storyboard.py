@@ -44,8 +44,15 @@ CLIP_PAD_SEC = 5.0
 # inputs
 # ---------------------------------------------------------------------------
 
-def load_curation(project_dir: Path) -> dict[int, tuple[str, float | None, float | None]]:
-    """``curation.json``: {"<fragment>": "video.mp4"} or ["video.mp4", start, end].
+CurationEntry = tuple[str, float | None, float | None] | None
+EMPTY_SOURCE = "curation:empty"
+
+
+def load_curation(project_dir: Path) -> dict[int, CurationEntry]:
+    """``curation.json``: {"<fragment>": "video.mp4"}, ["video.mp4", start, end] or null.
+
+    null marks a fragment deliberately left without footage: it stays empty even
+    when report.py found a moment for it (an empty fragment is never padded).
 
     Hand-edited, so every entry is checked: a ValueError names the file, the
     fragment and what is wrong, instead of a KeyError or a negative-length cut
@@ -71,9 +78,11 @@ def _fragment_number(key: str, path: Path) -> int:
     return int(key)
 
 
-def _curation_entry(key: str, spec: object) -> tuple[str, float | None, float | None]:
-    """(video, start, end) of one curation entry, checked."""
+def _curation_entry(key: str, spec: object) -> CurationEntry:
+    """(video, start, end) of one curation entry, checked; None for null."""
     where = f"curation.json fragment {key}"
+    if spec is None:
+        return None
     if isinstance(spec, str):
         if not spec.strip():
             raise ValueError(f"{where}: empty file name")
@@ -149,14 +158,17 @@ def derive_clip_range(start: float, end: float | None, frag_dur: float,
 
 
 def choose_clip(num: int, frag_dur: float,
-                curation: dict[int, tuple[str, float | None, float | None]],
+                curation: dict[int, CurationEntry],
                 moments: dict[int, list[dict]],
                 catalog: dict[str, dict]) -> dict:
     """One fragment's video + clip range + provenance."""
     candidates = moments.get(num, [])
 
     if num in curation:
-        video, start, end = curation[num]
+        entry = curation[num]
+        if entry is None:
+            return {"primary_video": None, "clip_source": EMPTY_SOURCE}
+        video, start, end = entry
         if start is not None:
             return {"primary_video": video, "clip_start": start,
                     "clip_end": end, "clip_source": "curation"}

@@ -60,6 +60,7 @@ class LayoutEvent:
     path: Path
     label: str
     gap_ms: int = 0       # uncovered tail of the fragment (clip too short)
+    last_fragment: int | None = None  # set when following fragments continue this clip
 
 
 @dataclass
@@ -236,8 +237,35 @@ def build_layout(timings: list[dict], fps: float, clips_dir: Path,
             path=path, label=label, gap_ms=gap_ms,
         ))
 
+    res.events = merge_continuations(res.events, fps)
     res.errors.extend(find_overlaps(res.events, fps))
     return res
+
+
+def merge_continuations(events: list[LayoutEvent], fps: float) -> list[LayoutEvent]:
+    """Neighbouring events that continue one clip without a jump become one event.
+
+    A map animation rendered on narration time is cut per fragment at
+    [start - t0, end - t0]. Placed as separate events, every fragment boundary
+    gets the loader's fade out + fade in — a dip to black in the middle of one
+    continuous picture. Two frames of slack cover the quantization of the two sides
+    (start and offset are rounded separately, and t0 itself need not sit on a frame).
+    """
+    slack_ms = 2 * 1000 / fps
+    out: list[LayoutEvent] = []
+    for e in sorted(events, key=lambda x: x.start_ms):
+        prev = out[-1] if out else None
+        if (prev is not None and prev.path == e.path and prev.gap_ms <= slack_ms
+                and abs(prev.start_ms + prev.length_ms - e.start_ms) <= slack_ms
+                and abs(prev.take_offset_ms + prev.length_ms - e.take_offset_ms) <= slack_ms):
+            out[-1] = LayoutEvent(
+                fragment=prev.fragment, start_ms=prev.start_ms,
+                length_ms=e.start_ms + e.length_ms - prev.start_ms,
+                take_offset_ms=prev.take_offset_ms, path=prev.path, label=prev.label,
+                gap_ms=e.gap_ms, last_fragment=e.fragment)
+            continue
+        out.append(e)
+    return out
 
 
 def events_to_timings(events: list[dict]) -> list[dict]:
@@ -334,8 +362,9 @@ def render_review_md(res: LayoutResult, project: str, fps: float) -> str:
     ]
     for e in res.events:
         note = f"{e.gap_ms / 1000:.1f}s gap at end" if e.gap_ms > 500 else ""
+        frag = f"{e.fragment:02d}" + (f"–{e.last_fragment:02d}" if e.last_fragment else "")
         lines.append(
-            f"| {e.fragment:02d} | {fmt_tc(e.start_ms, fps)} "
+            f"| {frag} | {fmt_tc(e.start_ms, fps)} "
             f"| {e.length_ms / 1000:.2f}s | {e.path.name} "
             f"| {e.take_offset_ms / 1000:.1f}s | {note} |")
     if res.uncovered:

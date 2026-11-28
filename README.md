@@ -101,6 +101,11 @@ Extras: `vlm` (indexing), `ocr`, `search` (E5 embeddings), `transcribe`
 for development. `requirements.txt` is generated from `pyproject.toml`
 (`python tools/requirements_txt.py`).
 
+`pyproject.toml` holds version ranges; `constraints.txt` pins the exact set the
+catalog was built with (Python 3.12, CUDA 12.8, 16 GB). To reproduce indexing,
+install with it: `pip install -c constraints.txt -e ".[all,test]"`, after
+`torch==2.10.0 torchvision==0.25.0` from the cu128 index.
+
 A regular `pip install ".[all]"` works as well: `.env`, `catalog/`, `projects/`
 and the caches then live in the folder you run from, or in `CLIPMAKER_HOME` if
 you set it — never inside site-packages. Put `games_local.py` there too.

@@ -73,7 +73,7 @@ def _pick(name: str, start: float, end: float, known: set[str]) -> dict:
 def items_from_shots(video: str, shots: dict, curation: dict, known: set[str]) -> list[dict]:
     """Gold items of a storyboard video: shots.json queries against curation.json picks."""
     items = []
-    for frag in sorted((k for k in curation if k.isdigit()), key=int):
+    for frag in sorted((k for k in curation if k.isdigit() and curation[k] is not None), key=int):
         name, start, end = curation[frag][:3]
         items.append({
             "id": f"{video}-f{int(frag):02d}", "video": video, "fragment": int(frag),

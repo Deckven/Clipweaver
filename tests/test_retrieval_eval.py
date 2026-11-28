@@ -238,3 +238,10 @@ def test_verdict_is_not_carried_to_an_item_whose_picks_changed():
     moved = {"items": [{"id": "x-e001", "queries": ["other"], "query_source": "label",
                         "picks": [pick | {"start": 40.0, "end": 45.0}], "status": "unreviewed"}]}
     assert merge_reviews(moved, old)["items"][0]["status"] == "unreviewed"
+
+
+def test_empty_curation_entry_is_not_a_gold_item():
+    # curation.json null = fragment deliberately left without footage: no pick to grade.
+    items = items_from_shots("gm", {"1": ["ship"], "2": ["fort"]}, {"1": [A, 0, 10], "2": None},
+                             {name_key(A)})
+    assert [it["fragment"] for it in items] == [1]

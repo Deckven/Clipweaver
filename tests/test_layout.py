@@ -259,3 +259,60 @@ def test_timings_without_an_end_are_an_error_not_a_crash(tmp_path):
     res = build_layout([t], FPS, tmp_path / "clips", tmp_path / "footage",
                        catalog_for(), probe=lambda p: None)
     assert res.events == [] and "fr 03" in res.errors[0]
+
+
+# --- one clip continued across fragments ------------------------------------
+
+def test_fragments_continuing_one_clip_merge_into_one_event(tmp_path):
+    # A map animation rendered on narration time is cut per fragment at
+    # [start - t0, end - t0]: on the timeline that is one continuous piece, and
+    # separate events would dip to black at every fragment boundary (fade in/out).
+    src = tmp_path / "src.mp4"
+    src.write_bytes(b"")
+    res = build_layout(
+        [timing(1, 100.0, 10.0, clip_start=0, clip_end=10),
+         timing(2, 110.0, 5.0, clip_start=10, clip_end=15),
+         timing(3, 115.0, 8.0, clip_start=15, clip_end=23)],
+        FPS, tmp_path / "clips", tmp_path / "footage",
+        catalog_for(source=src), probe=lambda p: None)
+    assert res.errors == []
+    assert len(res.events) == 1
+    e = res.events[0]
+    assert (e.fragment, e.last_fragment) == (1, 3)
+    assert (e.start_ms, e.length_ms, e.take_offset_ms) == (100000, 23000, 0)
+
+
+def test_same_clip_from_another_point_stays_a_separate_event(tmp_path):
+    src = tmp_path / "src.mp4"
+    src.write_bytes(b"")
+    res = build_layout(
+        [timing(1, 0.0, 10.0, clip_start=0, clip_end=10),
+         timing(2, 10.0, 10.0, clip_start=40, clip_end=50)],
+        FPS, tmp_path / "clips", tmp_path / "footage",
+        catalog_for(source=src), probe=lambda p: None)
+    assert [e.fragment for e in res.events] == [1, 2]
+
+
+def test_merged_event_shows_its_fragment_range_in_the_review(tmp_path):
+    from clipmaker.layout import render_review_md
+    src = tmp_path / "src.mp4"
+    src.write_bytes(b"")
+    res = build_layout(
+        [timing(31, 0.0, 10.0, clip_start=0, clip_end=10),
+         timing(32, 10.0, 10.0, clip_start=10, clip_end=20)],
+        FPS, tmp_path / "clips", tmp_path / "footage",
+        catalog_for(source=src), probe=lambda p: None)
+    assert "| 31–32 |" in render_review_md(res, "p", FPS)
+
+
+def test_a_rounding_tail_of_one_ms_does_not_block_the_merge(tmp_path):
+    # 15.24 s of clip quantizes to 15233 ms, the fragment to 15234 ms: a 1 ms
+    # "gap" is rounding, not a short clip.
+    src = tmp_path / "src.mp4"
+    src.write_bytes(b"")
+    res = build_layout(
+        [timing(1, 735.83, 15.24, clip_start=87.12, clip_end=102.36),
+         timing(2, 751.07, 12.3, clip_start=102.36, clip_end=114.66)],
+        FPS, tmp_path / "clips", tmp_path / "footage",
+        catalog_for(source=src), probe=lambda p: None)
+    assert len(res.events) == 1
